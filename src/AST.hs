@@ -27,7 +27,7 @@ data Module = Module { getModFile           :: IO.FilePath
 
 -- |
 -- A require for a module.
-data Require = Require FilePath Name (Maybe Name) [Name] deriving (Show, Eq, Ord)
+data Require = Require FilePath Name (Maybe Name) (Maybe [Name]) deriving (Show, Eq, Ord)
 
 -- |
 -- An environment for the interpreter.
