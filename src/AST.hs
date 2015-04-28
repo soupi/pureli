@@ -15,10 +15,18 @@ import GHC.Generics                (Generic)
 -- definitions
 ------------------
 
+
+data ModuleDef = ModuleDef { modFile       :: IO.FilePath
+                           , modName       :: Atom
+                           , modExposes    :: Maybe [WithMD Atom]
+                           , modRequires   :: [Require]
+                           , modMacros     :: [(Name, WithMD Expr)]
+                           , modDefs       :: [(Name, WithMD Expr)]
+                           }
+
 -- |
 -- A module definition
-data Module = Module { getModFile           :: IO.FilePath
-                     , getModName           :: Name
+data Module = Module { getModDef            :: ModuleDef
                      , getModImports        :: [Module]
                      , getModExports        :: Env
                      , getModExportedMacros :: Env
