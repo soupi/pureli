@@ -1,11 +1,3 @@
-{-
- ==============
-   NOT READY
- ==============
- -}
-
-
-
 
 -- |
 -- a utility module
@@ -16,6 +8,7 @@ import qualified Control.Monad.Trans.Except as MT
 import qualified Control.Monad.Trans.Class  as MT
 
 import AST
+import Printer()
 
 -- |
 -- Error might contain the problematic expression with it's metadata and an error message.
@@ -29,6 +22,7 @@ instance Show Error where
 
 -- |
 -- utility to throw an expression.
+throwErr :: (MT.MonadTrans t, Monad m) => Maybe (WithMD Expr) -> String -> t (MT.ExceptT Error m) a
 throwErr expr err =  MT.lift $ MT.throwE $ Error expr err
 
 
