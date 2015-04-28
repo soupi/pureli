@@ -8,7 +8,7 @@ import qualified Text.Parsec as P
 import qualified Text.Parsec.String as P (Parser)
 
 import AST
---import Printer()
+import Printer()
 import qualified Lexer as L
 import ParseNumber
 
@@ -80,9 +80,10 @@ moduleDef = withMD $ do
   (regDefs, macroDefs) <- defines
   return $ ModuleDef fName mName exposes reqs macroDefs regDefs
 
+modDef :: P.Parser (P.SourceName, Atom, Maybe [WithMD Atom])
 modDef = parensOrBrackets $ do
   fName <- fmap P.sourceName P.getPosition
-  P.string "module"
+  _ <- P.string "module"
   P.spaces
   mName <- symbol
   P.spaces
@@ -105,7 +106,7 @@ defineFun = withMD $ do
   md <- P.getPosition
   WithMD argsMD args <- withMD $ parensOrBrackets $ P.sepBy (withMD symbol) P.spaces
   case validArgs args of
-    Just pos -> P.parserFail "unexpected &. argument is not last."
+    Just _ -> P.parserFail "unexpected &. argument is not last."
     Nothing  -> do
       body <- withMD expr
       pure $ LIST [WithMD md (ATOM (Symbol "lambda")), WithMD argsMD (LIST (map (fmap ATOM) args)), body]
@@ -143,15 +144,15 @@ requires = P.many require
 require :: P.Parser Require
 require =  parensOrBrackets $ do
   L.reserved "require"
-  String modFile <- string
+  String modFilePath <- string
   P.spaces
-  modName <- L.identifier
+  moduleName <- L.identifier
   P.spaces
   newName <- P.optionMaybe L.identifier
   P.spaces
   args    <- P.optionMaybe $ parensOrBrackets $ P.sepBy L.identifier P.spaces
   P.spaces
-  return $ Require modFile modName newName args
+  return $ Require modFilePath moduleName newName args
 
 -------------
 -- Parsing

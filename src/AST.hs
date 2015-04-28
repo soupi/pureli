@@ -46,6 +46,8 @@ type Env = M.Map Name (WithMD Expr)
 -- holds metadata on the type
 data WithMD a = WithMD Metadata a deriving (Eq, Generic)
 
+removeMD :: WithMD a -> a
+removeMD (WithMD _ x) = x
 -- |
 -- metadata, current holds the position in the interpreted file
 type Metadata = P.SourcePos
