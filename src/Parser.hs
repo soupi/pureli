@@ -182,10 +182,3 @@ parseFile :: String -> String -> Either String [WithMD ModuleDef]
 parseFile name input = case P.parse (P.many comments >> modules) name input of
   Left err -> Left (show err)
   Right val -> Right val
-
-{-
-parseProgram :: String -> String -> Either String Program
-parseProgram name input = case P.parse (P.many comments >> program) name input of
-  Left err -> Left (show err)
-  Right val -> Right val
-  -}

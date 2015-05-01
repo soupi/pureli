@@ -26,7 +26,7 @@ data ModuleDef = ModuleDef { modFile       :: IO.FilePath
 
 -- |
 -- A module definition
-data Module = Module { getModFile           :: Name
+data Module = Module { getModFile           :: IO.FilePath
                      , getModName           :: Name
                      , getModImports        :: [Module]
                      , getModExports        :: Env
