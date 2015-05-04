@@ -18,7 +18,7 @@ import GHC.Generics                (Generic)
 
 data ModuleDef = ModuleDef { modFile       :: IO.FilePath
                            , modName       :: Atom
-                           , modExposes    :: Maybe [WithMD Atom]
+                           , modExposes    :: Maybe [Name]
                            , modRequires   :: [Require]
                            , modMacros     :: [(Name, WithMD Expr)]
                            , modDefs       :: [(Name, WithMD Expr)]
@@ -32,7 +32,7 @@ data Module = Module { getModFile           :: IO.FilePath
                      , getModExports        :: Env
                      , getModExportedMacros :: Env
                      , getModMacros         :: Env
-                     , getModEnv            :: Env }
+                     , getModEnv            :: Env } deriving (Eq, Generic)
 
 -- |
 -- A require for a module.
@@ -59,11 +59,11 @@ type Name =  String
 
 -- |
 -- a function with the environment it had when interpreted - for lexical scoping
-data Closure = Closure Env (WithMD Fun) deriving (Eq, Ord)
+data Closure = Closure Env (WithMD Fun) deriving (Eq)
 
 -- |
 -- a function is a list of argument names, maybe an additional 'rest' argument and a body
-data Fun = Fun [Name] (Maybe Name) Expr deriving (Eq, Ord)
+data Fun = Fun [Name] (Maybe Name) Expr deriving (Eq)
 
 -- |
 -- the main expression for our language
@@ -71,7 +71,8 @@ data Expr = LIST [WithMD Expr]  -- ^a list of expressions
           | QUOTE (WithMD Expr) -- ^quoted expression
           | ATOM Atom           -- ^a primitive expression
           | PROCEDURE Closure   -- ^a procedure - a closure
-          deriving (Eq, Ord, Generic)
+          | MODULE    Module    -- ^a module
+          deriving (Eq, Generic)
 
 -- |
 -- primitives of the language

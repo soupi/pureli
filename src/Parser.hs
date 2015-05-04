@@ -80,14 +80,14 @@ moduleDef = withMD $ do
   (regDefs, macroDefs) <- defines
   return $ ModuleDef fName mName exposes reqs macroDefs regDefs
 
-modDef :: P.Parser (P.SourceName, Atom, Maybe [WithMD Atom])
+modDef :: P.Parser (P.SourceName, Atom, Maybe [Name])
 modDef = parensOrBrackets $ do
   fName <- fmap P.sourceName P.getPosition
   _ <- P.string "module"
   P.spaces
   mName <- symbol
   P.spaces
-  exposes <- P.optionMaybe $ parensOrBrackets $ P.sepBy (withMD symbol) P.spaces
+  exposes <- P.optionMaybe $ parensOrBrackets $ P.sepBy L.identifier P.spaces
   return (fName, mName, exposes)
 
 
