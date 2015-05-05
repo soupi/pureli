@@ -11,7 +11,9 @@
 -- Create a module before evaluation
 module Module where
 
-import Data.Maybe (fromMaybe)
+import Data.Maybe  (fromMaybe)
+import Data.Either (partitionEithers)
+import Control.Applicative ((<$>),(<*>),(<|>))
 import qualified Control.Monad.Trans.Class as MT
 import qualified Control.Monad.Trans.Except as MT
 import qualified Control.Monad.Trans.State.Strict as MT
@@ -77,7 +79,7 @@ cacheRequire modul@(Require mFile mName newName exposedDefs) = do
 lookupModule :: Name -> Name -> [WithMD ModuleDef] -> Either String ModuleDef
 lookupModule mFile mName [] = Left $ "Couldn't find module " ++ mName ++ " in file " ++ mFile
 lookupModule mFile mName (WithMD _ m:ms) =
-  if   mFile == modFile m && mName == case modName m of { Symbol x -> x; _ -> "" }
+  if   mFile == modFile m && mName == modName m
   then return m
   else lookupModule mFile mName ms
 
@@ -89,7 +91,8 @@ requireToModule (Require fileName modName definitions newName) = do
   case (lookupModule fileName modName) =<< (parseFile fileName moduleContent) of
     Left err  -> MT.throwE (Error Nothing err)
     Right res -> do
-      reqMods <- requiresToModules (modRequires res)
+      reqModDefs <- requiresToModules (modRequires res)
+      let reqMods = fromDefToModule reqModDefs
       let prp = MT.runIdentity $ MT.runExceptT $ preprocessModule res
       preprocessedModule <- case prp of
         Left err -> MT.throwE err
@@ -101,6 +104,38 @@ requireToModule (Require fileName modName definitions newName) = do
       let modResult = Module (fromMaybe modName newName) reqMods wantedDefs env
       return $ modResult
 
+
+fromDefToModule :: ModuleDef -> Either Name Module
+fromDefToModule def = do
+  (exposedDefs, exposedMacros) <-
+    case modExposes def of
+      Nothing      -> return (modDefs def, modMacros def)
+      Just exposes -> partitionEithers <$> which (modDefs def) (modMacros def) exposes
+  exportedDefs   <- filterListMap (map fst exposedDefs) (modDefs def)
+  exportedMacros <- filterListMap (map fst exposedMacros) (modMacros def)
+  return $
+    Module { getModFile = modFile def
+           , getModName = modName def
+           , getModImports = []
+           , getModExports        = M.fromList exportedDefs
+           , getModExportedMacros = M.fromList exportedMacros
+           , getModMacros  = M.fromList $ modMacros def
+           , getModEnv     = M.fromList $ modDefs def
+           }
+
+filterListMap :: (Show a, Eq a) => [a] -> [(a, b)] -> Either String [(a,b)]
+filterListMap [] _  = return []
+filterListMap _  [] = return []
+filterListMap (a:as) list = case lookup a list of
+  Nothing -> Left $ "Could not find definition to expose: " ++ show a
+  Just x  -> return . ((a,x):) =<< filterListMap as list
+
+
+which :: Eq a => [(a,b)] -> [(a,b)] -> [a] -> Either a [Either (a,b) (a,b)]
+which list1 list2 xs = mapM f xs
+  where f x = case maybeToEither x (lookup x list1 >>= return . Left . (,) x) of
+                Right r -> Right r
+                Left  _ -> maybeToEither x (lookup x list2 >>= Just . Right . (,) x)
 
 -- |
 -- converts a list of (Name, WithMD Expr) to Env. fails if there are duplicate names

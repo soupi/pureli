@@ -1,6 +1,7 @@
 module Parser (getValFromExpr, parseFile) where
 
 import Control.Applicative (pure, (<$>))
+import Control.Monad (liftM)
 
 import Data.Either (partitionEithers)
 import Text.ParserCombinators.Parsec ((<|>))
@@ -80,12 +81,12 @@ moduleDef = withMD $ do
   (regDefs, macroDefs) <- defines
   return $ ModuleDef fName mName exposes reqs macroDefs regDefs
 
-modDef :: P.Parser (P.SourceName, Atom, Maybe [Name])
+modDef :: P.Parser (P.SourceName, Name, Maybe [Name])
 modDef = parensOrBrackets $ do
   fName <- fmap P.sourceName P.getPosition
   _ <- P.string "module"
   P.spaces
-  mName <- symbol
+  mName <- L.identifier
   P.spaces
   exposes <- P.optionMaybe $ parensOrBrackets $ P.sepBy L.identifier P.spaces
   return (fName, mName, exposes)
@@ -112,13 +113,13 @@ defineFun = withMD $ do
       pure $ LIST [WithMD md (ATOM (Symbol "lambda")), WithMD argsMD (LIST (map (fmap ATOM) args)), body]
 
 defines :: P.Parser ([(Name, WithMD Expr)], [(Name, WithMD Expr)])
-defines = go >>= return . partitionEithers
-  where go = P.many1 $ (P.try define >>= return . Left) <|> (P.try defmacro >>= return . Right)
+defines = liftM partitionEithers go
+  where go = P.many1 $ liftM Left (P.try define) <|> liftM Right (P.try defmacro)
 
 validArgs :: [WithMD Atom] -> Maybe P.SourcePos
 validArgs [] = Nothing
 validArgs (x:xs) = case x of
-  WithMD md (Symbol ('&':_)) -> if length xs == 0 then Nothing else Just md
+  WithMD md (Symbol ('&':_)) -> if null xs then Nothing else Just md
   _ -> validArgs xs
 
 -- Macros

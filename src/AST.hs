@@ -17,7 +17,7 @@ import GHC.Generics                (Generic)
 
 
 data ModuleDef = ModuleDef { modFile       :: IO.FilePath
-                           , modName       :: Atom
+                           , modName       :: Name
                            , modExposes    :: Maybe [Name]
                            , modRequires   :: [Require]
                            , modMacros     :: [(Name, WithMD Expr)]
