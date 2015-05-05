@@ -1,5 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
-
 -- |a module to preprocess macros
 module Preprocess (preprocess, preprocessModule) where
 
@@ -30,7 +28,7 @@ preprocessModule modul = do
 
 -- |preprocess an expression.
 preprocess :: WithMD Expr -> Preprocess Expr
-preprocess exprWithMD@(WithMD md expr) = do
+preprocess exprWithMD@(WithMD md expr) =
   case expr of
     ATOM a      -> preprocessAtom exprWithMD a
     QUOTE l     -> return . WithMD md . QUOTE =<< return l
@@ -51,7 +49,7 @@ preprocessAtom (WithMD md _) atom = do
 preprocessOp :: WithMD Expr -> [WithMD Expr] -> Preprocess Expr
 preprocessOp exprWithMD [] = return exprWithMD
 -- |separate operator from operands
-preprocessOp exprWithMD@(WithMD md _) (operatorWithMD@(WithMD _ operator):operands) = do
+preprocessOp exprWithMD@(WithMD md _) (operatorWithMD@(WithMD _ operator):operands) =
   case operator of
     -- |might be a macro call
     (ATOM (Symbol s)) -> preprocessOpSymbol exprWithMD operands s
@@ -75,20 +73,19 @@ preprocessOpSymbol exprWithMD@(WithMD md _) operands name = do
         prepOps <- mapM preprocess operands
         return $ WithMD md $ LIST (prepOp:prepOps)
       -- |in environment and is in the form of a macro, preprocess macro.
-      Just v@(WithMD _ (LIST ((WithMD _ (LIST [WithMD _ (LIST _), _])):_)))  -> do
+      Just v@(WithMD _ (LIST (WithMD _ (LIST [WithMD _ (LIST _), _]):_)))  -> do
         prepOps <- mapM preprocess operands
         preprocessMacro v exprWithMD prepOps
       -- |in environment but is not in the form of a macro, preprocess rest and return the list.
-      Just v -> do
-        WithMD md . LIST <$> mapM preprocess (v:operands)
+      Just v -> WithMD md . LIST <$> mapM preprocess (v:operands)
 
 
 -- |preprocess macro. tries to fit amount of arguments recursively.
 preprocessMacro :: WithMD Expr -> WithMD Expr -> [WithMD Expr] -> Preprocess Expr
-preprocessMacro macro rootExpr operands = do
+preprocessMacro macro rootExpr operands =
   case macro of
     WithMD md (LIST []) -> throwErr (Just rootExpr) $ "arity problem, defmacro at " ++ show md ++ "does not take " ++ show (length operands) ++ " arguments"
-    WithMD md (LIST ((WithMD _ (LIST [WithMD _ (LIST args), body])):rest)) -> do
+    WithMD md (LIST (WithMD _ (LIST [WithMD _ (LIST args), body]):rest)) ->
       if length operands /= length args
       -- |try next macro
       then preprocessMacro (WithMD md (LIST rest)) rootExpr operands
