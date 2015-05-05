@@ -1,5 +1,7 @@
 (module main)
 
+(require "run-extra.rkt" run-extra extra (hello-str))
+
 (define main
-  (print! "hello world!"))
+  (print! extra/hello-str))
 

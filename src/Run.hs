@@ -14,6 +14,8 @@ import Control.Monad (unless)
 import Control.Monad.Trans.Except
 import Control.Monad.Trans.Reader
 import System.IO (hFlush, stdout)
+import System.Posix.Directory (changeWorkingDirectory)
+import System.FilePath.Posix  (takeDirectory, takeFileName)
 
 import AST
 import Utils
@@ -26,7 +28,7 @@ import Eval
 run :: [String] -> IO ()
 run = \case
     []     -> putStrLn welcome_message >> repl >> putStrLn (unlines ["","Goodbye."]) -- |^run repl
-    [file] -> runExceptT (loadModule file "main" >>= evalModule) >>= \case -- |^interpret file
+    [file] -> changeWorkingDirectory (takeDirectory file) >> runExceptT (loadModule (takeFileName file) "main" >>= evalModule) >>= \case -- |^interpret file
       Left err                -> print err
       Right (WithMD _ result) -> print result
     _      -> putStrLn "Error. too many arguments"

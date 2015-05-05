@@ -23,8 +23,8 @@ import qualified Data.Map as M
 import AST
 import Utils
 import Parser
+import Printer
 import Preprocess
-
 
 -- |
 -- read module definitions from file
@@ -69,7 +69,6 @@ cacheRequire modul@(Require mFile mName newName exposedDefs) = do
           MT.lift $ MT.modify (M.insert (mFile, mName) (m { getModName = mName }))
           return modResult
     Nothing -> do
-      MT.lift $ MT.modify $ M.insert (mFile, mName) $ Module mFile ";cycle" [] (M.fromList []) (M.fromList []) (M.fromList []) (M.fromList [])
       modResult <- requireToModule modul
       -- test test test
       return $ modResult
@@ -105,6 +104,7 @@ getModuleFromFile fileName mName = do
       case lookupModule fileName mName modulDefs of
         Left err  -> MT.throwE (Error Nothing err)
         Right res -> do
+          MT.lift $ MT.modify $ M.insert (fileName, mName) $ Module fileName ";cycle" [] (M.fromList []) (M.fromList []) (M.fromList []) (M.fromList [])
           reqMods <- requiresToModules (modRequires res)
           modul   <- case fromDefToModule reqMods res of
             Left err -> MT.throwE (Error Nothing err)

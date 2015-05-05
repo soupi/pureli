@@ -13,7 +13,6 @@ import Printer()
 import qualified Lexer as L
 import ParseNumber
 
-
 parensOrBrackets :: P.Parser a -> P.Parser a
 parensOrBrackets parser = P.try (L.parens parser) <|> P.try (L.brackets parser)
 
