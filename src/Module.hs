@@ -66,13 +66,12 @@ cacheRequire modul@(Require mFile mName newName exposedDefs) = do
                   Just (False, exposedDefs) -> M.fromList $ filter (\x -> fst x `elem` exposedDefs) (M.toList (getModEnv m))
                   _                         -> getModEnv m
           let modResult = m { getModExports = wantedDefs, getModName = (fromMaybe mName newName) }
-          MT.lift $ MT.modify (M.insert (mFile, mName) modResult)
+          MT.lift $ MT.modify (M.insert (mFile, mName) (m { getModName = mName }))
           return modResult
     Nothing -> do
       MT.lift $ MT.modify $ M.insert (mFile, mName) $ Module mFile ";cycle" [] (M.fromList []) (M.fromList []) (M.fromList []) (M.fromList [])
       modResult <- requireToModule modul
       -- test test test
-      MT.lift $ MT.modify (M.insert (mFile, mName) modResult)
       return $ modResult
 
 
