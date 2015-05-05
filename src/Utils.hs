@@ -25,6 +25,9 @@ instance Show Error where
 throwErr :: (MT.MonadTrans t, Monad m) => Maybe (WithMD Expr) -> String -> t (MT.ExceptT Error m) a
 throwErr expr err =  MT.lift $ MT.throwE $ Error expr err
 
+eitherToErr :: (MT.MonadTrans t, Monad m) => Either String a -> t (MT.ExceptT Error m) a
+eitherToErr (Left str) = throwErr Nothing str
+eitherToErr (Right x)  = MT.lift $ return x
 
 -- |
 -- if Maybe b is nothing, replace it with Left a. otherwise: Right b

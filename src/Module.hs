@@ -28,9 +28,9 @@ import Preprocess
 
 -- |
 -- read module definitions from file
-readModules :: FilePath -> MT.ExceptT Error IO [WithMD ModuleDef]
+readModules :: (MT.MonadTrans t, Monad (t IO)) =>FilePath -> MT.ExceptT Error (t IO) [WithMD ModuleDef]
 readModules filepath = do
-  fileContent <- MT.lift (readFile filepath)
+  fileContent <- MT.lift (MT.lift (readFile filepath))
                  `MT.catchE`
                  \_ -> MT.throwE (Error Nothing $ "Couldn't find file " ++ filepath)
   case parseFile filepath fileContent of
@@ -41,9 +41,9 @@ readModules filepath = do
 
 -- |
 -- Read a source file and return the modules within
-loadModules :: FilePath -> MT.ExceptT Error IO Module
-loadModules filepath = do
-  result <- MT.lift $ flip MT.evalStateT (M.fromList []) $ MT.runExceptT (requireToModule $ Require filepath [] Nothing Nothing)
+loadModule :: FilePath -> Name -> MT.ExceptT Error IO Module
+loadModule filepath mName = do
+  result <- MT.lift $ flip MT.evalStateT (M.fromList []) $ MT.runExceptT (requireToModule $ Require filepath mName Nothing Nothing)
   case result of
     Right x -> return x
     Left er -> MT.throwE er
@@ -85,28 +85,41 @@ lookupModule mFile mName (WithMD _ m:ms) =
 
 
 -- |converts a require to a module
-requireToModule :: Require -> MT.ExceptT Error (MT.StateT (M.Map (Name, Name) Module) IO) Module
-requireToModule (Require fileName modName definitions newName) = do
-  moduleContent <- MT.lift (MT.lift (readFile modName)) `MT.catchE` \_ -> MT.throwE (Error Nothing $ "Couldn't find file " ++ modName)
-  case (lookupModule fileName modName) =<< (parseFile fileName moduleContent) of
-    Left err  -> MT.throwE (Error Nothing err)
-    Right res -> do
-      reqModDefs <- requiresToModules (modRequires res)
-      let reqMods = fromDefToModule reqModDefs
-      let prp = MT.runIdentity $ MT.runExceptT $ preprocessModule res
-      preprocessedModule <- case prp of
-        Left err -> MT.throwE err
-        Right rs -> return rs
-      env <- envIfNoDups modName (getModEnv preprocessedModule)
-      let wantedDefs = if definitions == []
-          then env
-          else M.fromList $ filter (\x -> fst x `elem` definitions) (M.toList env)
-      let modResult = Module (fromMaybe modName newName) reqMods wantedDefs env
-      return $ modResult
+requireToModule :: Require -> MT.ExceptT Error (MT.StateT (M.Map (FilePath, Name) Module) IO) Module
+requireToModule (Require filePath mName newName exposing) = do
+  modul <- getModuleFromFile filePath mName
+  env <- envIfNoDups mName (getModEnv modul)
+  let wantedDefs = case exposing of
+        Nothing          -> env
+        Just definitions ->  M.fromList $ filter (\x -> fst x `elem` definitions) (M.toList env)
+  let modResult = modul { getModName = (fromMaybe mName newName), getModExports = wantedDefs }
+  return $ modResult
 
 
-fromDefToModule :: ModuleDef -> Either Name Module
-fromDefToModule def = do
+getModuleFromFile :: FilePath -> Name -> MT.ExceptT Error (MT.StateT (M.Map (FilePath, Name) Module) IO) Module
+getModuleFromFile fileName mName = do
+  state <- MT.lift MT.get
+  case M.lookup (fileName, mName) state of
+    Just m  -> return m
+    Nothing -> do
+      modulDefs <- readModules fileName
+      case lookupModule fileName mName modulDefs of
+        Left err  -> MT.throwE (Error Nothing err)
+        Right res -> do
+          reqMods <- requiresToModules (modRequires res)
+          modul   <- case fromDefToModule reqMods res of
+            Left err -> MT.throwE (Error Nothing err)
+            Right x  -> MT.lift $ return x
+          let prp = MT.runIdentity $ MT.runExceptT $ preprocessModule modul
+          preprocessedModule <- case prp of
+            Left err -> MT.throwE err
+            Right rs -> return rs
+          MT.lift MT.get >>= MT.lift . MT.put . M.insert (fileName, mName) preprocessedModule
+          return preprocessedModule
+
+
+fromDefToModule :: [Module] -> ModuleDef -> Either Name Module
+fromDefToModule reqs def = do
   (exposedDefs, exposedMacros) <-
     case modExposes def of
       Nothing      -> return (modDefs def, modMacros def)
@@ -116,7 +129,7 @@ fromDefToModule def = do
   return $
     Module { getModFile = modFile def
            , getModName = modName def
-           , getModImports = []
+           , getModImports = reqs
            , getModExports        = M.fromList exportedDefs
            , getModExportedMacros = M.fromList exportedMacros
            , getModMacros  = M.fromList $ modMacros def
@@ -140,10 +153,10 @@ which list1 list2 xs = mapM f xs
 -- |
 -- converts a list of (Name, WithMD Expr) to Env. fails if there are duplicate names
 envIfNoDups :: Monad m => Name -> Env -> MT.ExceptT Error m Env
-envIfNoDups modName env = do
+envIfNoDups mName env = do
   let dups = duplicates $ map fst (M.toList env)
   if length dups > 0
-  then MT.throwE $ Error Nothing $ "Duplicate definitions in module: " ++ modName ++ "\n*** " ++ show dups
+  then MT.throwE $ Error Nothing $ "Duplicate definitions in module: " ++ mName ++ "\n*** " ++ show dups
   else return $ env
 
 

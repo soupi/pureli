@@ -3,11 +3,16 @@
 -- |a way to print expressions
 module Printer where
 
+import qualified Data.Map as M (toList)
+
 import AST
 
 ---------------
 -- Instances
 ---------------
+
+instance Show Module where
+  show = showModule
 
 instance Show ModuleDef where
   show = showModuleDef
@@ -81,8 +86,17 @@ showListStrings (x:y:xs) = x ++ " " ++ showListStrings (y:xs)
 showListElements :: Show a => [a] -> String
 showListElements = showListStrings . fmap show
 
+-- |convert a define to a string.
+showDefine :: Name -> (Name, WithMD Expr) -> String
+showDefine kind (name, (WithMD _ (LIST (WithMD _ (ATOM (Symbol "lambda")) : (WithMD _ (LIST args)) : body : [])))) =
+  unlines ["(" ++ kind ++ " " ++ name ++ " [" ++ showListElements args ++ "]"
+          ,"  " ++ showExpr 1 (removeMD body) ++ ")"]
+showDefine kind (name, WithMD _ expr) =
+  unlines ["(" ++ kind ++ " " ++ name
+          ,showExpr 1 expr ++ ")"]
 
--- |convert a program to a string.
+
+-- |convert a module definition to a string.
 showModuleDef :: ModuleDef -> String
 showModuleDef modu = unlines
     ["(module " ++ show (modName modu) ++ ")"
@@ -93,12 +107,24 @@ showModuleDef modu = unlines
     ,defs modDefs "define"]
   where defs f k = unlines $ map (showDefine k) (f modu)
 
--- |convert a define to a string.
-showDefine :: Name -> (Name, WithMD Expr) -> String
-showDefine kind (name, (WithMD _ (LIST (WithMD _ (ATOM (Symbol "lambda")) : (WithMD _ (LIST args)) : body : [])))) =
-  unlines ["(" ++ kind ++ " " ++ name ++ " [" ++ showListElements args ++ "]"
-          ,"  " ++ showExpr 1 (removeMD body) ++ ")"]
-showDefine kind (name, WithMD _ expr) =
-  unlines ["(" ++ kind ++ " " ++ name
-          ,showExpr 1 expr ++ ")"]
+-- |convert a module to a string.
+showModule :: Module -> String
+showModule modu = unlines
+    ["(module " ++ show (getModName modu) ++ ")"
+    ,""
+    ,defs (M.toList . getModMacros) "defmacro"
+    ,""
+    ,""
+    ,defs (M.toList . getModEnv) "define"]
+  where defs f k = unlines $ fmap (showDefine k) (f modu)
 
+showdataModule :: Module -> String
+showdataModule m =
+  unlines $ fmap ($m)
+  [getModFile
+  ,getModName
+  ,show . fmap showdataModule . getModImports
+  ,show . getModExports
+  ,show . getModExportedMacros
+  ,show . getModMacros
+  ,show . getModEnv]
