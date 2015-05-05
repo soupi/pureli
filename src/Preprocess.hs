@@ -18,7 +18,7 @@ import Printer()
 -- |evaluation type
 type Preprocess a = MT.ReaderT Env (MT.ExceptT Error MT.Identity) (WithMD a)
 
--- |preprocess a program.
+-- |preprocess a module.
 preprocessModule :: Module -> MT.ExceptT Error MT.Identity Module
 preprocessModule modul = do
   let env = getModMacros modul

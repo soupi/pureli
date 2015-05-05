@@ -71,7 +71,6 @@ data Expr = LIST [WithMD Expr]  -- ^a list of expressions
           | QUOTE (WithMD Expr) -- ^quoted expression
           | ATOM Atom           -- ^a primitive expression
           | PROCEDURE Closure   -- ^a procedure - a closure
-          | MODULE    Module    -- ^a module
           deriving (Eq, Generic)
 
 -- |

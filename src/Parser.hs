@@ -107,20 +107,22 @@ defineFun = withMD $ do
   md <- P.getPosition
   WithMD argsMD args <- withMD $ parensOrBrackets $ P.sepBy (withMD symbol) P.spaces
   case validArgs args of
-    Just _ -> P.parserFail "unexpected &. argument is not last."
+    Just _ -> P.parserFail "unexpected &. rest argument is not last."
     Nothing  -> do
       body <- withMD expr
       pure $ LIST [WithMD md (ATOM (Symbol "lambda")), WithMD argsMD (LIST (map (fmap ATOM) args)), body]
 
-defines :: P.Parser ([(Name, WithMD Expr)], [(Name, WithMD Expr)])
-defines = liftM partitionEithers go
-  where go = P.many1 $ liftM Left (P.try define) <|> liftM Right (P.try defmacro)
 
-validArgs :: [WithMD Atom] -> Maybe P.SourcePos
+validArgs :: [WithMD Atom] -> Maybe Metadata
 validArgs [] = Nothing
 validArgs (x:xs) = case x of
   WithMD md (Symbol ('&':_)) -> if null xs then Nothing else Just md
   _ -> validArgs xs
+
+
+defines :: P.Parser ([(Name, WithMD Expr)], [(Name, WithMD Expr)])
+defines = liftM partitionEithers go
+  where go = P.many1 $ liftM Left (P.try define) <|> liftM Right (P.try defmacro)
 
 -- Macros
 

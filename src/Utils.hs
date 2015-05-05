@@ -73,3 +73,9 @@ splitBy v vs = map reverse $ go [] vs
           | otherwise = go (y:xs) ys
 
 
+validArgs :: [String] -> (Bool, Maybe String)
+validArgs [] = (True, Nothing)
+validArgs (x:xs) = case x of
+  ('&':var) -> if null xs then (True, Just var) else (False, Nothing)
+  _ -> validArgs xs
+
