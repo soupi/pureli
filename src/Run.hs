@@ -14,8 +14,10 @@ import Control.Monad (unless)
 import Control.Monad.Trans.Except
 import Control.Monad.Trans.Reader
 import System.IO (hFlush, stdout)
-import System.Posix.Directory (changeWorkingDirectory)
-import System.FilePath.Posix  (takeDirectory, takeFileName)
+import System.Info (os)
+import System.Directory (setCurrentDirectory)
+import qualified System.FilePath.Posix   as P (takeDirectory, takeFileName)
+import qualified System.FilePath.Windows as W (takeDirectory, takeFileName)
 
 import AST
 import Utils
@@ -28,11 +30,21 @@ import Eval
 run :: [String] -> IO ()
 run = \case
     []     -> putStrLn welcome_message >> repl >> putStrLn (unlines ["","Goodbye."]) -- |^run repl
-    [file] -> changeWorkingDirectory (takeDirectory file) >> runExceptT (loadModule (takeFileName file) "main" >>= evalModule) >>= \case -- |^interpret file
-      Left err                -> print err
-      Right (WithMD _ result) -> print result
+    [file] ->
+      let (takeDirectory, takeFileName) = systemFuncs
+      in setCurrentDirectory (takeDirectory file) >> runExceptT (loadModule (takeFileName file) "main" >>= evalModule) >>= \case -- |^interpret file
+        Left err                -> print err
+        Right (WithMD _ result) -> print result
     _      -> putStrLn "Error. too many arguments"
 
+
+-- |
+-- get relative system functions (windows or posix)
+systemFuncs :: (FilePath -> FilePath, FilePath -> FilePath)
+systemFuncs =
+  if os == "mingw32"
+  then (W.takeDirectory,W.takeFileName)
+  else (P.takeDirectory,P.takeFileName)
 
 -- |
 -- tries to parse the expression and interpret it.
