@@ -18,7 +18,6 @@ import System.Posix.Directory (changeWorkingDirectory)
 import System.FilePath.Posix  (takeDirectory, takeFileName)
 
 import AST
-import Utils
 import Parser
 import Module
 import Eval
@@ -36,11 +35,13 @@ run = \case
 
 -- |
 -- tries to parse the expression and interpret it.
-runExpr :: String -> IO (Either Error (WithMD Expr))
+runExpr :: String -> IO ()
 runExpr content =
-  case getValFromExpr "REPL" content of
-    Right expr -> runExceptT $ runReaderT (eval expr) initEvalState
-    Left err   -> runExceptT $ throwE (Error Nothing err)
+    case parseExpr "REPL" content of
+      Left  err -> putStrLn err
+      Right res ->  runExceptT (runReaderT (eval res) initEvalState) >>= \case
+        Left err     -> print err
+        Right result -> print result
 
 -- |
 -- a REPL for expressions.
@@ -50,11 +51,7 @@ repl = do
   hFlush stdout
   expr <- getLine
   unless (expr == ":q") $ do
-    case getValFromExpr "REPL" expr of
-      Left  err -> putStrLn err
-      Right res ->  runExceptT (runReaderT (eval res) initEvalState) >>= \case
-        Left err     -> print err
-        Right result -> print result
+    runExpr expr
     repl
 
 -- |

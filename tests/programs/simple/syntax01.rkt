@@ -1,0 +1,15 @@
+{~ this test cover two things
+   one of them is comments and {~ nested comments ~}
+~}
+; the second one is brackets and parens matching
+
+(module main)
+
+(define main (do! (print! (id (const x 3)))))
+
+(define x 5)
+
+
+(define id [x] x)
+
+(define const [x y] x)

@@ -185,7 +185,7 @@ evalProcedure _ rootExpr = throwErr (Just rootExpr) $ "not a procedure"
 
 zipWithRest restVar md args ops =
   case zipWithRemains args ops of
-    (zipped, rest) -> M.fromList $ (restVar, WithMD md (LIST rest)) : zipped
+    (zipped, rest) -> M.fromList $ (restVar, WithMD md (LIST (WithMD md (ATOM $ Symbol "list") : rest))) : zipped
 
 zipWithRemains :: [a] -> [b] -> ([(a,b)],[b])
 zipWithRemains [] rest = ([], rest)

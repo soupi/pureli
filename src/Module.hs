@@ -13,7 +13,7 @@ module Module where
 
 import Data.Maybe  (fromMaybe)
 import Data.Either (partitionEithers)
-import Control.Applicative ((<$>),(<*>),(<|>))
+import Control.Applicative ((<$>))
 import qualified Control.Monad.Trans.Class as MT
 import qualified Control.Monad.Trans.Except as MT
 import qualified Control.Monad.Trans.State.Strict as MT
@@ -23,7 +23,7 @@ import qualified Data.Map as M
 import AST
 import Utils
 import Parser
-import Printer
+import Printer()
 import Preprocess
 
 -- |

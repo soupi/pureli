@@ -1,4 +1,4 @@
-module Parser (getValFromExpr, parseFile) where
+module Parser (parseExpr, parseFile) where
 
 import Control.Applicative (pure, (<$>))
 import Control.Monad (liftM)
@@ -175,8 +175,8 @@ nestedComments  = do
 comments :: P.Parser Char
 comments = (P.try P.space >> pure ';') <|> P.try lineComment <|> P.try nestedComments
 
-getValFromExpr :: String -> String -> Either String (WithMD Expr)
-getValFromExpr name input = case P.parse (P.many comments >> withMD expr) name input of
+parseExpr :: String -> String -> Either String (WithMD Expr)
+parseExpr name input = case P.parse (P.many comments >> withMD expr) name input of
   Left err -> Left (show err)
   Right val -> Right val
 
