@@ -35,7 +35,7 @@ executable pureli
     ,parallel
     ,deepseq
     ,generic-deriving
-    ,unix
+    ,directory
     ,filepath
 
   hs-source-dirs:      src
