@@ -69,8 +69,8 @@ showClosure indent (Closure _ x) = getIndent indent ++ show x
 
 -- |convert a function to a string.
 showFun ::  Int -> Fun -> String
-showFun indent (Fun args opt body) = getIndent indent ++ "(lambda (" ++ showListStrings argsAndOpt ++ ") " ++ show body ++ ")"
-  where argsAndOpt = maybe args  ((args++) . (:[])) opt
+showFun indent (Fun (FunArgsList arg) body) = getIndent indent ++ "(lambda " ++ arg ++ " " ++ show body ++ ")"
+showFun indent (Fun (FunArgs args) body) = getIndent indent ++ "(lambda (" ++ showListStrings args ++ ") " ++ show body ++ ")"
 
 -- |convert a type with metadata to a string.
 showWithMD ::  Show a => Int -> WithMD a -> String
@@ -88,7 +88,7 @@ showListElements = showListStrings . fmap show
 
 -- |convert a define to a string.
 showDefine :: Name -> (Name, WithMD Expr) -> String
-showDefine kind (name, (WithMD _ (LIST (WithMD _ (ATOM (Symbol "lambda")) : (WithMD _ (LIST args)) : body : [])))) =
+showDefine kind (name, WithMD _ (LIST (WithMD _ (ATOM (Symbol "lambda")) : WithMD _ (LIST args) : body : []))) =
   unlines ["(" ++ kind ++ " " ++ name ++ " [" ++ showListElements args ++ "]"
           ,"  " ++ showExpr 1 (removeMD body) ++ ")"]
 showDefine kind (name, WithMD _ expr) =

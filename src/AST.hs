@@ -63,7 +63,9 @@ data Closure = Closure Env (WithMD Fun) deriving (Eq)
 
 -- |
 -- a function is a list of argument names, maybe an additional 'rest' argument and a body
-data Fun = Fun [Name] (Maybe Name) Expr deriving (Eq)
+data Fun = Fun FunArgs Expr deriving (Eq)
+
+data FunArgs = FunArgs [Name] | FunArgsList Name deriving (Eq)
 
 -- |
 -- the main expression for our language
