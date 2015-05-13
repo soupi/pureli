@@ -85,6 +85,7 @@ preprocessMacro :: WithMD Expr -> WithMD Expr -> [WithMD Expr] -> Preprocess Exp
 preprocessMacro macro rootExpr operands =
   case macro of
     WithMD md (LIST []) -> throwErr (Just rootExpr) $ "arity problem, defmacro at " ++ show md ++ "does not take " ++ show (length operands) ++ " arguments"
+    WithMD md (LIST (WithMD _ (LIST [WithMD _ (ATOM (Symbol args)), body]):rest)) -> throwErr (Just rootExpr) "single param list not yet implemented for macros"
     WithMD md (LIST (WithMD _ (LIST [WithMD _ (LIST args), body]):rest)) ->
       if length operands /= length args
       -- |try next macro

@@ -129,9 +129,9 @@ defmacro =  parensOrBrackets $ do
 
 macroArgs :: P.Parser (WithMD Expr)
 macroArgs = parensOrBrackets $ withMD $ do
-  WithMD argsMD args <- withMD $ parensOrBrackets $ P.sepBy (withMD symbol) P.spaces
+  WithMD argsMD args <- funArgs
   body <- withMD expr
-  pure $ LIST [WithMD argsMD (LIST (map (fmap ATOM) args)), body]
+  pure $ LIST [WithMD argsMD args, body]
 
 -- requires
 requires :: P.Parser [Require]
