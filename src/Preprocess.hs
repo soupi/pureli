@@ -15,6 +15,7 @@ import Utils
 import AST
 import Printer()
 
+
 -- |evaluation type
 type Preprocess a = MT.ReaderT Env (MT.ExceptT Error MT.Identity) (WithMD a)
 
@@ -22,7 +23,7 @@ type Preprocess a = MT.ReaderT Env (MT.ExceptT Error MT.Identity) (WithMD a)
 preprocessModule :: Module -> MT.ExceptT Error MT.Identity Module
 preprocessModule modul = do
   let env = getModMacros modul
-  macros <- mapM (mapM (\expr -> MT.runReaderT (preprocess expr) env)) $ M.toList (getModMacros modul)
+  let macros = M.toList env
   definitions <- mapM (mapM (\expr -> MT.runReaderT (preprocess expr) (M.fromList macros))) $ M.toList (getModEnv modul)
   return $ modul { getModEnv = M.fromList definitions, getModMacros = M.fromList macros }
 

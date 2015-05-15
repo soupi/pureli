@@ -70,7 +70,7 @@ showClosure indent (Closure _ x) = getIndent indent ++ show x
 -- |convert a function to a string.
 showFun ::  Int -> Fun -> String
 showFun indent (Fun (FunArgsList arg) body) = getIndent indent ++ "(lambda " ++ arg ++ " " ++ show body ++ ")"
-showFun indent (Fun (FunArgs args) body) = getIndent indent ++ "(lambda (" ++ showListStrings args ++ ") " ++ show body ++ ")"
+showFun indent (Fun (FunArgs args mn) body) = getIndent indent ++ "(lambda (" ++ showListStrings (args ++ [maybe "" ('&':) mn]) ++ ") " ++ show body ++ ")"
 
 -- |convert a type with metadata to a string.
 showWithMD ::  Show a => Int -> WithMD a -> String

@@ -11,7 +11,7 @@ lexer :: Tok.TokenParser ()
 lexer = Tok.makeTokenParser style
     where
         style = emptyDef { Tok.commentLine     = ";"
-                         , Tok.reservedNames   = ["nil", "defmacro", "define", "require", "module", "#t", "#f"]
+                         , Tok.reservedNames   = ["nil", "defmacro", "define", "require", "module", "(define", "(require", "(module", "#t", "#f"]
                          , Tok.caseSensitive   = True
                          , Tok.commentStart    = "{~"
                          , Tok.commentEnd      = "~}"
@@ -19,6 +19,10 @@ lexer = Tok.makeTokenParser style
                          , Tok.identStart      = P.oneOf "&!:$#%*+./<=>?@\\^|-~" <|> P.letter
                          , Tok.identLetter     = P.oneOf "!:$#%*+./<=>?@\\^|-~" <|> P.alphaNum
                          }
+
+symbol :: String -> Parser String
+symbol = Tok.symbol lexer
+
 char :: Parser Char
 char = Tok.charLiteral lexer
 

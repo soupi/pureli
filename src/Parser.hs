@@ -1,7 +1,8 @@
+{-# LANGUAGE LambdaCase #-}
+
 module Parser (parseExpr, parseFile) where
 
 import Control.Applicative (pure, (<$>))
-import Control.Monad (liftM)
 
 import Data.Either (partitionEithers)
 import Text.ParserCombinators.Parsec ((<|>))
@@ -14,7 +15,7 @@ import qualified Lexer as L
 import ParseNumber
 
 parensOrBrackets :: P.Parser a -> P.Parser a
-parensOrBrackets parser = P.try (L.parens parser) <|> P.try (L.brackets parser)
+parensOrBrackets parser = L.parens parser <|> L.brackets parser
 
 
 -----------
@@ -22,11 +23,11 @@ parensOrBrackets parser = P.try (L.parens parser) <|> P.try (L.brackets parser)
 -----------
 
 atom :: P.Parser Atom
-atom =  P.try parseNumber
-    <|> P.try bool
-    <|> P.try symbol
-    <|> P.try string
-    <|> P.try nil
+atom =  parseNumber
+    <|> bool
+    <|> symbol
+    <|> string
+    <|> nil
 
 symbol :: P.Parser Atom
 symbol = Symbol <$> L.identifier
@@ -60,18 +61,21 @@ withMD :: P.Parser a -> P.Parser (WithMD a)
 withMD parser =  P.getPosition >>= \pos -> WithMD pos <$> parser
 
 expr :: P.Parser Expr
-expr =  (LIST   <$> P.try list)
-    <|> (ATOM   <$> P.try atom)
+expr =  (LIST <$> list)
+    <|> (ATOM <$> atom)
 
 list :: P.Parser [WithMD Expr]
 list  = parensOrBrackets $ P.sepBy (withMD expr) P.spaces
 
 -------------
--- Program
+-- Modules
 -------------
 
 modules :: P.Parser [WithMD ModuleDef]
-modules = P.many moduleDef
+modules = do
+  mods <- P.many moduleDef
+  P.eof
+  return mods
 
 moduleDef :: P.Parser (WithMD ModuleDef)
 moduleDef = withMD $ do
@@ -81,25 +85,38 @@ moduleDef = withMD $ do
   return $ ModuleDef fName mName exposes reqs macroDefs regDefs
 
 modDef :: P.Parser (P.SourceName, Name, Maybe [Name])
-modDef = parensOrBrackets $ do
+modDef = do
   fName <- fmap P.sourceName P.getPosition
-  _ <- P.string "module"
+  L.reserved "(module"
   P.spaces
   mName <- L.identifier
   P.spaces
   exposes <- P.optionMaybe $ parensOrBrackets $ P.sepBy L.identifier P.spaces
+  rparen
   return (fName, mName, exposes)
 
 
 -- Defines
 
 define :: P.Parser (Name, WithMD Expr)
-define =  parensOrBrackets $ do
-  L.reserved "define"
+define =  do
+  L.reserved "(define"
   name <- L.identifier
-  expression <- P.try defineFun <|> P.try (withMD expr)
+  P.spaces
+  expression <- P.try defineFun <|> withMD expr
+  rparen
   return (name, expression)
 
+ignoreCharSpaces :: Char -> P.Parser ()
+ignoreCharSpaces c = do
+  P.spaces
+  L.symbol [c]
+  P.spaces
+
+rparen :: P.Parser ()
+rparen = ignoreCharSpaces ')'
+--lparen :: P.Parser ()
+--lparen = ignoreCharSpaces '('
 
 defineFun :: P.Parser (WithMD Expr)
 defineFun = withMD $ do
@@ -110,21 +127,36 @@ defineFun = withMD $ do
 
 funArgs :: P.Parser (WithMD Expr)
 funArgs = withMD $
-  fmap (LIST . map (fmap ATOM)) (parensOrBrackets $ P.sepBy (withMD symbol) P.spaces)
-  <|> fmap ATOM symbol
+  P.try funArgList <|> fmap ATOM symbol
+
+funArgList :: P.Parser Expr
+funArgList = do
+  args <- parensOrBrackets $ P.sepBy (withMD symbol) P.spaces
+  case validArgs args of
+      Just _  -> P.parserFail "unexpected &. rest argument is not last."
+      Nothing -> return $ (LIST . map (fmap ATOM)) args
+
+validArgs :: [WithMD Atom] -> Maybe Metadata
+validArgs [] = Nothing
+validArgs (x:xs) = case x of
+  WithMD md (Symbol ('&':_)) -> if null xs then Nothing else Just md
+  _ -> validArgs xs
+
 
 defines :: P.Parser ([(Name, WithMD Expr)], [(Name, WithMD Expr)])
-defines = liftM partitionEithers go
-  where go = P.many1 $ liftM Left (P.try define) <|> liftM Right (P.try defmacro)
+defines = fmap partitionEithers go
+  where go = P.many1 df
+        df = fmap Left define <|> fmap Right defmacro
 
 -- Macros
 
 defmacro :: P.Parser (Name, WithMD Expr)
-defmacro =  parensOrBrackets $ do
+defmacro =  do
   pos <- P.getPosition
-  L.reserved "defmacro"
+  L.reserved "(defmacro"
   name <- L.identifier
   expression <- P.many1 macroArgs
+  rparen
   return (name, WithMD pos (LIST expression))
 
 macroArgs :: P.Parser (WithMD Expr)
@@ -138,8 +170,8 @@ requires :: P.Parser [Require]
 requires = P.many require
 
 require :: P.Parser Require
-require =  parensOrBrackets $ do
-  L.reserved "require"
+require =  do
+  L.reserved "(require"
   String modFilePath <- string
   P.spaces
   moduleName <- L.identifier
@@ -147,7 +179,7 @@ require =  parensOrBrackets $ do
   newName <- P.optionMaybe L.identifier
   P.spaces
   args    <- P.optionMaybe $ parensOrBrackets $ P.sepBy L.identifier P.spaces
-  P.spaces
+  rparen
   return $ Require modFilePath moduleName newName args
 
 -------------
