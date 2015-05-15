@@ -3,7 +3,7 @@ TODO
 
 - Test Test Test
 - Handle duplications of arguments and definitions
-- IO: read/write from/to files (!)
+- ~~IO: read/write from/to files (!)~~
 - Parallelism (!)
 - Standard library (!)
 - Syntax highlight
