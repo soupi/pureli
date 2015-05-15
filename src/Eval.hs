@@ -8,6 +8,7 @@
 
 module Eval (initEvalState, eval, evalModule) where
 
+import Control.Exception (IOException, catch)
 import Data.List (find)
 import Control.Monad.Trans.Class  (lift)
 import qualified Control.Monad.Trans.Reader as MT
@@ -280,7 +281,9 @@ ioBuiltins :: Builtins IO
 ioBuiltins = M.fromList [("pure",  evalPure)
                         ,("do!",    evalDo)
                         ,("print!", evalPrint)
-                        ,("read!",  evalRead)]
+                        ,("read!",  evalRead)
+                        ,("print-file!", evalPrintFile)
+                        ,("read-file!",  evalReadFile)]
 
 -- |take the value from an IO context
 fromIO :: WithMD Expr -> IOEval Expr
@@ -344,6 +347,36 @@ evalRead (WithMD md _) [] = do
   input <- lift (lift getLine)
   returnIO $ WithMD md $ ATOM $ String input
 evalRead expr xs = throwErr (Just expr) $ "bad arity, expected 0 arguments, got: " ++ show (length xs)
+
+-- |evaluate a 'print-file!' IO action
+evalPrintFile :: WithMD Expr -> [WithMD Expr] -> IOEval Expr
+evalPrintFile rootExpr [file@(WithMD md _), expr] = do
+  eFile   <- eval file
+  evalled <- eval expr
+  case (eFile, evalled) of
+    ((WithMD _ (ATOM (String wfile))), (WithMD _ (ATOM (String str)))) -> lift $ lift $ writeFile wfile str
+    ((WithMD _ (ATOM (String wfile))), _) -> do
+      result <- lift $ lift ((writeFile wfile (show evalled) >> return Nothing) `catch` (\e -> return $ Just $ show (e :: IOException)))
+      case result of
+        Nothing -> return ()
+        Just er -> throwErr (Just rootExpr) er
+    _ -> throwErr (Just eFile) $ "unexpected filepath"
+  returnIO $ WithMD md $ ATOM Nil
+evalPrintFile expr xs = throwErr (Just expr) $ "bad arity, expected 2 argument, got: " ++ show (length xs)
+
+-- |evaluate a 'read!' IO action
+evalReadFile :: WithMD Expr -> [WithMD Expr] -> IOEval Expr
+evalReadFile expr@(WithMD md _) [file] = do
+  eFile <- eval file
+  input <- case eFile of
+    (WithMD _ (ATOM (String rfile))) -> do
+      result <- lift $ lift ((readFile rfile >>= return . Right) `catch` (\e -> return $ Left $ show (e :: IOException)))
+      case result of
+        Right x -> return x
+        Left er -> throwErr (Just expr) er
+    _                                -> throwErr (Just eFile) $ "unexpected filepath"
+  returnIO $ WithMD md $ ATOM $ String input
+evalReadFile expr xs = throwErr (Just expr) $ "bad arity, expected 1 arguments, got: " ++ show (length xs)
 
 
 ----------
