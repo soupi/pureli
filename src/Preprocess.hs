@@ -17,6 +17,7 @@ import Printer()
 
 import Debug.Trace
 
+
 -- |evaluation type
 type Preprocess a = MT.ReaderT Env (MT.ExceptT Error MT.Identity) (WithMD a)
 
@@ -77,9 +78,21 @@ preprocessOpSymbol exprWithMD@(WithMD md _) operands name = do
       -- |in environment and is in the form of a macro, preprocess macro.
       Just v@(WithMD _ (LIST (WithMD _ (LIST [WithMD _ (LIST _), _]):_)))  -> do
         prepOps <- mapM preprocess operands
-        preprocessMacro v exprWithMD prepOps
+        preprocessMacroRest v exprWithMD prepOps
       -- |in environment but is not in the form of a macro, preprocess rest and return the list.
       Just v -> WithMD md . LIST <$> mapM preprocess (v:operands)
+
+
+-- |preprocess macro. tries to fit amount of arguments recursively.
+preprocessMacroRest :: WithMD Expr -> WithMD Expr -> [WithMD Expr] -> Preprocess Expr
+preprocessMacroRest macro rootExpr operands = do
+  env <- ask
+  case operands of
+    [WithMD _ (ATOM (Symbol ('&':var)))] ->
+      case M.lookup (';':var) env of
+        Just (WithMD _ (LIST list)) -> preprocessMacro macro rootExpr list
+        _ -> preprocessMacro macro rootExpr operands
+    _-> preprocessMacro macro rootExpr operands
 
 
 -- |preprocess macro. tries to fit amount of arguments recursively.
@@ -104,34 +117,61 @@ preprocessMacro macro rootExpr operands =
         extendedEnv <- return . M.union (M.fromList [(renamedName, WithMD md $ QUOTE $ WithMD md $ LIST preprocessedArgs)]) =<< ask
         -- |preprocess renamed macro body and replace argument names with argument expressions in it.
         MT.withReaderT (const extendedEnv) (preprocess afterRename)
-    WithMD md (LIST (WithMD _ (LIST [WithMD _ (LIST args), body]):rest)) ->
-      if length operands /= length args
-      -- |try next macro
-      then preprocessMacro (WithMD md (LIST rest)) rootExpr operands
-      -- |this macro fits. preprocess macro,
-      else do
-        -- |preprocess arguments
-        preprocessedArgs <- mapM preprocess operands
-        -- |get argument names
-        argNames   <- mapM (MT.lift . exprToSymbolName) args
-        -- |get arguments renamed with initial ';' as symbols
-        argRenamed <- mapM (MT.lift . mapExprToSymbolName (';':)) args
-        -- |extend environment by mapping arguments symbols from name to ;name
-        renamedEnv <- return . M.union (M.fromList (zip argNames argRenamed)) =<< ask
-        -- |replace arguments symbols from name to ;name in body of macro
-        afterRename <- MT.withReaderT (const renamedEnv) (preprocess body)
-        -- |extend environment with real arguments
-        let renamedNames = map (';':) argNames
-        extendedEnv <- return . M.union (M.fromList (zip renamedNames preprocessedArgs)) =<< ask
-        -- |preprocess renamed macro body and replace argument names with argument expressions in it.
-        MT.withReaderT (const extendedEnv) (preprocess afterRename)
+    WithMD md (LIST (WithMD _ (LIST [WithMD _ (LIST args), body]):rest)) -> do
+      -- |get argument names
+      aNames   <- mapM (MT.lift . exprToSymbolName) args
+      case hasRest aNames aNames of
+        (argNames, Nothing) ->
+          if length operands /= length args
+          -- |try next macro
+          then preprocessMacro (WithMD md (LIST rest)) rootExpr operands
+          -- |this macro fits. preprocess macro,
+          else do
+            -- |preprocess arguments
+            preprocessedArgs <- mapM preprocess operands
+            -- |get arguments renamed with initial ';' as symbols
+            argRenamed <- mapM (MT.lift . mapExprToSymbolName (';':)) args
+            -- |extend environment by mapping arguments symbols from name to ;name
+            renamedEnv <- return . M.union (M.fromList (zip argNames argRenamed)) =<< ask
+            -- |replace arguments symbols from name to ;name in body of macro
+            afterRename <- MT.withReaderT (const renamedEnv) (preprocess body)
+            -- |extend environment with real arguments
+            let renamedNames = map (';':) argNames
+            extendedEnv <- return . M.union (M.fromList (zip renamedNames preprocessedArgs)) =<< ask
+            -- |preprocess renamed macro body and replace argument names with argument expressions in it.
+            MT.withReaderT (const extendedEnv) (preprocess afterRename)
+        (argNames, Just rarg) ->
+          if length operands +1 < length args
+          -- |try next macro
+          then preprocessMacro (WithMD md (LIST rest)) rootExpr operands
+          -- |this macro fits. preprocess macro,
+          else do
+            -- |preprocess arguments
+            preprocessedArgs <- mapM preprocess operands
+            -- |get arguments renamed with initial ';' as symbols
+            argRenamed <- mapM (MT.lift . mapExprToSymbolName (';':)) args
+            -- |extend environment by mapping arguments symbols from name to ;name
+            let renamedEnv = M.fromList (zip argNames argRenamed)
+            -- |replace arguments symbols from name to ;name in body of macro
+            afterRename <- MT.withReaderT (const renamedEnv) (preprocess body)
+            -- |extend environment with real arguments
+            let renamedNames = map (';':) argNames
+            let firstZip  = zip (init renamedNames) preprocessedArgs
+            let secondZip = (';':rarg, WithMD md $ LIST (drop (length (init renamedNames)) preprocessedArgs))
+            extendedEnv <- return . M.union (M.fromList (firstZip ++ [secondZip])) =<< ask
+            traceM "---------------"
+            traceShowM extendedEnv
+            -- |preprocess renamed macro body and replace argument names with argument expressions in it.
+            MT.withReaderT (const extendedEnv) (preprocess afterRename)
     _ -> return rootExpr
 
-
-  -- can use ';' for renaming
-
+hasRest :: [Name] -> [Name] -> ([Name], Maybe Name)
+hasRest lst ['&':rest] = (init lst ++ [rest], Just rest)
+hasRest lst []         = (lst, Nothing)
+hasRest lst (_:xs)     = hasRest lst xs
 
 mapExprToSymbolName :: (Name -> Name) -> WithMD Expr -> MT.ExceptT Error MT.Identity (WithMD Expr)
+mapExprToSymbolName f (WithMD md  (ATOM (Symbol ('&':name)))) = return (WithMD md (ATOM (Symbol (f name))))
 mapExprToSymbolName f (WithMD md  (ATOM (Symbol name))) = return (WithMD md (ATOM (Symbol (f name))))
 mapExprToSymbolName _ expr = MT.throwE $ Error (Just expr) "problem while trying to convert expression to symbol"
 
