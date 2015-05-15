@@ -15,6 +15,7 @@ import Utils
 import AST
 import Printer()
 
+import Debug.Trace
 
 -- |evaluation type
 type Preprocess a = MT.ReaderT Env (MT.ExceptT Error MT.Identity) (WithMD a)
@@ -64,7 +65,7 @@ preprocessOp exprWithMD@(WithMD md _) (operatorWithMD@(WithMD _ operator):operan
 preprocessOpSymbol :: WithMD Expr -> [WithMD Expr] -> Name -> Preprocess Expr
 preprocessOpSymbol exprWithMD@(WithMD md _) operands name = do
   env <- ask
-  if name == "quote"
+  if name == "mquote"
   then return exprWithMD
   else
     case M.lookup name env of
@@ -103,7 +104,6 @@ preprocessMacro macro rootExpr operands =
         extendedEnv <- return . M.union (M.fromList [(renamedName, WithMD md $ QUOTE $ WithMD md $ LIST preprocessedArgs)]) =<< ask
         -- |preprocess renamed macro body and replace argument names with argument expressions in it.
         MT.withReaderT (const extendedEnv) (preprocess afterRename)
-
     WithMD md (LIST (WithMD _ (LIST [WithMD _ (LIST args), body]):rest)) ->
       if length operands /= length args
       -- |try next macro

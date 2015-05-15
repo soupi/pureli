@@ -2,10 +2,10 @@
 (module main)
 
 (defmacro show
-  ([f]
+  [(f)
    (if (procedure? f)
      "<procedure>"
-      ((eval (quote show)) f))))
+      ((eval (mquote show)) f))])
 
 (define main
    (do!

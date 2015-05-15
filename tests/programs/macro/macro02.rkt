@@ -5,14 +5,10 @@
   [(f)
    (if (procedure? f)
      "<procedure>"
-      ((eval (quote f))))])
-
-{~
+      (qe f))])
 
 (defmacro qe
   [(expr) (eval (quote expr))])
-
-~}
 
 (define main
    (do!
@@ -22,6 +18,6 @@
 
 (module test)
 
-(require "macro01.rkt" main)
+(require "macro02.rkt" main)
 
 (define x 5)
