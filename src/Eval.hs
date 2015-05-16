@@ -5,6 +5,8 @@
  -}
 
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 module Eval (initEvalState, eval, evalModule) where
 
@@ -61,6 +63,8 @@ type Evaluation m a = MT.ReaderT (EvalState m a) (MT.ExceptT Error m) (WithMD a)
 type PureEval a = Evaluation MT.Identity a
 -- |evaluation in the io monad
 type IOEval a = Evaluation IO a
+
+instance NFData (MT.ReaderT (EvalState MT.Identity a) (MT.ExceptT Error MT.Identity) b)
 
 -- |environment and builtin function
 data EvalState m a = EvalState { getModule :: Module, getBuiltins :: Builtins m }
@@ -238,7 +242,7 @@ builtinsIO = pureBuiltins `M.union` ioBuiltins
 
 -- |pure builtins in an arbitrary monad
 pureBuiltins :: Monad m => Builtins m
-pureBuiltins = M.fromList [("+", evalPlus)
+pureBuiltins = M.fromList [("+", evalPlus id)
                           ,("-", evalMinus)
                           ,("*", evalMul)
                           ,("/", evalDiv)
@@ -278,7 +282,7 @@ pureBuiltins = M.fromList [("+", evalPlus)
 
 -- |pure builtins in an arbitrary monad
 parBuiltins :: Builtins MT.Identity
-parBuiltins = M.fromList [("+", evalPlus)
+parBuiltins = M.fromList [("+", evalPlus (`P.using` P.parList P.rdeepseq))
                           ,("-", evalMinus)
                           ,("*", evalMul)
                           ,("/", evalDiv)
@@ -346,7 +350,7 @@ evalPure rootExpr = \case
   [element] -> do
     -- |evaluate an expression in a pure context
     state <- ask
-    case (MT.runIdentity $ MT.runExceptT $ MT.runReaderT (eval element) (state { getBuiltins = builtinsID })) of
+    case (MT.runIdentity $ MT.runExceptT $ MT.runReaderT (eval element) (state { getBuiltins = parBuiltins })) of
       Left err -> lift $ throwE err
       Right rs -> returnIO rs
   xs        -> throwErr (Just rootExpr) $  "bad arity, expected 1 argument, got: " ++ show (length xs)
@@ -659,26 +663,26 @@ evalEval rootExpr = \case
 
 
 -- |(+)
-evalPlus :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
-evalPlus = evalArith (return . sum) (return . sum)
+--evalPlus :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
+evalPlus parListF = evalArith parListF (return . sum) (return . sum)
 
 -- |(-)
 evalMinus :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
-evalMinus = evalArith (return . sub) (return . sub)
+evalMinus = evalArith id (return . sub) (return . sub)
 
 -- |(*)
 evalMul :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
-evalMul = evalArith (return . product) (return . product)
+evalMul = evalArith id (return . product) (return . product)
 
 -- |(/)
 evalDiv :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
-evalDiv = evalArith (divide div) (divide (/))
+evalDiv = evalArith id (divide div) (divide (/))
 
 
 -- |evaluate arithmetic expressions. converts integers to floats if an argument is a float.
-evalArith :: Monad m => ([Integer] -> MT.ExceptT Error m Integer) -> ([Double] -> MT.ExceptT Error m Double) -> WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
-evalArith intOp realOp rootExpr@(WithMD exprMD _) operands = do
-  results <- sequence $ fmap (evalToNumber rootExpr) operands
+--evalArith :: Monad m => ([Integer] -> MT.ExceptT Error m Integer) -> ([Double] -> MT.ExceptT Error m Double) -> WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
+evalArith parListF intOp realOp rootExpr@(WithMD exprMD _) operands = do
+  results <- sequence $ parListF $ fmap (evalToNumber rootExpr) operands
   if length (filter isReal results) > 0
   then
     lift (realOp (map atomToDouble results) >>= return . WithMD exprMD . ATOM . Real)
