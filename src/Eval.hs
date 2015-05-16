@@ -63,7 +63,7 @@ type PureEval a = Evaluation MT.Identity a
 type IOEval a = Evaluation IO a
 
 -- |environment and builtin function
-data EvalState m a = EvalState { getModule :: Module, getBuiltins :: Builtins m, getParBuiltinsSingle :: ParBuiltinsSingle m a, getParBuiltinsList :: ParBuiltinsList m a }
+data EvalState m a = EvalState { getModule :: Module, getBuiltins :: Builtins m }
 
 getEnv :: EvalState m a -> Env
 getEnv = getModEnv . getModule
@@ -94,11 +94,11 @@ changeModule modu state = state { getModule = modu }
 
 -- |change the builtin functions
 changeBuiltins ::  Builtins m -> ParBuiltinsSingle m a -> ParBuiltinsList m a -> EvalState t a -> EvalState m a
-changeBuiltins builtins pbs pbl state = state { getBuiltins = builtins, getParBuiltinsSingle = pbs, getParBuiltinsList = pbl }
+changeBuiltins builtins pbs pbl state = state { getBuiltins = builtins }
 
 -- |an initial environment state
 initEvalState :: NFData a => EvalState IO a
-initEvalState = EvalState (Module "" "REPL" [] emptyEnv emptyEnv emptyEnv emptyEnv) builtinsIO builtinsSingle builtinsList
+initEvalState = EvalState (Module "" "REPL" [] emptyEnv emptyEnv emptyEnv emptyEnv) builtinsIO
 
 -- |empty Environment
 emptyEnv :: Env
@@ -109,7 +109,7 @@ evalModule :: Module -> MT.ExceptT Error IO (WithMD Expr)
 evalModule modul = do
   case M.lookup "main" (getModEnv modul) of
     Nothing   -> throwE $ Error Nothing $ "No main function in program \n*** " ++ (show $ map fst (M.toList (getModEnv modul)))
-    Just expr -> MT.runReaderT (eval expr) (EvalState modul ioBuiltins builtinsSingle builtinsList)
+    Just expr -> MT.runReaderT (eval expr) (EvalState modul ioBuiltins)
 
 
 -- |evaluate an expression
@@ -199,7 +199,7 @@ zipWithRest restVar md args ops =
 
 zipWithRemains :: [a] -> [b] -> ([(a,b)],[b])
 zipWithRemains [] rest = ([], rest)
-zipWithRemains xs []   = ([], [])
+zipWithRemains _  []   = ([], [])
 zipWithRemains (x:xs) (y:ys) =
   case zipWithRemains xs ys of
       (zipped, rest) -> ((x,y):zipped, rest)
@@ -276,6 +276,48 @@ pureBuiltins = M.fromList [("+", evalPlus)
                           ,("letrec", evalLetrec)]
 
 
+-- |pure builtins in an arbitrary monad
+parBuiltins :: Builtins MT.Identity
+parBuiltins = M.fromList [("+", evalPlus)
+                          ,("-", evalMinus)
+                          ,("*", evalMul)
+                          ,("/", evalDiv)
+                          ,("if", evalIf)
+                          ,("++", evalAppend)
+                          ,("zero?",      evalIs isZeroTest)
+                          ,("nil?",       evalIs isNilTest)
+                          ,("empty?",     evalIs isEmptyTest)
+                          ,("string?",    evalIs isStringTest)
+                          ,("integer?",   evalIs isIntegerTest)
+                          ,("real?",      evalIs isRealTest)
+                          ,("number?",    evalIs isNumberTest)
+                          ,("procedure?", evalIs isFunTest)
+                          ,("list?",      evalIs isListTest)
+                          ,("=",      evalCompare (compareAtoms (==)))
+                          ,("<>",     evalCompare (compareAtoms (/=)))
+                          ,("<",      evalCompare (compareAtoms (<)))
+                          ,(">",      evalCompare (compareAtoms (>)))
+                          ,("<=",     evalCompare (compareAtoms (<=)))
+                          ,(">=",     evalCompare (compareAtoms (>=)))
+                          ,("length", evalLength)
+                          ,("slice", evalSlice)
+                          ,("show", evalShow)
+                          ,("error", evalError)
+                          ,("try", evalTry)
+                          ,("trace", evalTrace)
+                          ,("list", evalList)
+                          ,("car", evalCar)
+                          ,("cdr", evalCdr)
+                          ,("lambda", evalLambda)
+                          ,("quote",  evalQuote)
+                          ,("mquote", evalQuote)
+                          ,("eval", evalEval)
+                          ,("let", evalLet)
+                          ,("letrec", evalLetrec)]
+
+
+
+
 -- |IO builtins in the IO monad
 ioBuiltins :: Builtins IO
 ioBuiltins = M.fromList [("pure",  evalPure)
@@ -304,7 +346,7 @@ evalPure rootExpr = \case
   [element] -> do
     -- |evaluate an expression in a pure context
     state <- ask
-    case (MT.runIdentity $ MT.runExceptT $ MT.runReaderT (eval element) (state { getBuiltins = builtinsID, getParBuiltinsSingle = parBuiltinsSingle, getParBuiltinsList = parBuiltinsList })) of
+    case (MT.runIdentity $ MT.runExceptT $ MT.runReaderT (eval element) (state { getBuiltins = builtinsID })) of
       Left err -> lift $ throwE err
       Right rs -> returnIO rs
   xs        -> throwErr (Just rootExpr) $  "bad arity, expected 1 argument, got: " ++ show (length xs)
@@ -636,7 +678,6 @@ evalDiv = evalArith (divide div) (divide (/))
 -- |evaluate arithmetic expressions. converts integers to floats if an argument is a float.
 evalArith :: Monad m => ([Integer] -> MT.ExceptT Error m Integer) -> ([Double] -> MT.ExceptT Error m Double) -> WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
 evalArith intOp realOp rootExpr@(WithMD exprMD _) operands = do
-  Just pr <- return . M.lookup ParHead . getParBuiltinsList =<< ask
   results <- sequence $ fmap (evalToNumber rootExpr) operands
   if length (filter isReal results) > 0
   then
@@ -745,7 +786,7 @@ atomToDouble (Integer i) = fromIntegral i
 evalToNumber :: Monad m => WithMD Expr -> WithMD Expr -> MT.ReaderT (EvalState m a) (MT.ExceptT Error m) Atom
 evalToNumber rootExpr expr = do
     state <- ask
-    case (MT.runIdentity $ MT.runExceptT $ MT.runReaderT (eval expr) (state { getBuiltins = builtinsID, getParBuiltinsSingle = parBuiltinsSingle, getParBuiltinsList = parBuiltinsList })) of
+    case (MT.runIdentity $ MT.runExceptT $ MT.runReaderT (eval expr) (state { getBuiltins = builtinsID })) of
       Right (WithMD _ (ATOM a)) -> if isNumber a then lift (return a) else throwErr (Just rootExpr) $ show a ++ " not a number"
       Right _        -> throwErr (Just rootExpr) $ show expr ++ " not a number"
       Left x -> lift $ MT.throwE x
