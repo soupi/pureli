@@ -29,31 +29,14 @@ import Utils
 import AST
 import Printer()
 
-parApply :: P.Strategy a -> a -> MT.Identity a
-parApply f x = return (x `P.using` f)
-
 
 -----------------
 -- Par Builtins
 -----------------
 
-data ParExpr = ParHead | ParDeep deriving (Eq, Ord)
 
-
-type ParBuiltinsList m a   = M.Map ParExpr ([a] -> m [a])
-type ParBuiltinsSingle m a = M.Map ParExpr (a -> m a)
-
-parBuiltinsSingle :: NFData a => M.Map ParExpr (a -> MT.Identity a)
-parBuiltinsSingle = M.fromList [(ParHead, parApply P.rpar), (ParDeep, parApply P.rdeepseq)]
-
-parBuiltinsList :: NFData a => M.Map ParExpr ([a] -> MT.Identity [a])
-parBuiltinsList = M.fromList [(ParDeep, parApply (P.parList P.rdeepseq)), (ParHead, parApply (P.parList P.rpar))]
-
-builtinsSingle :: (NFData a, Monad m) => M.Map ParExpr (a -> m a)
-builtinsSingle = M.fromList[(ParHead, return), (ParDeep, return)]
-
-builtinsList :: (NFData a, Monad m) => M.Map ParExpr ([a] -> m [a])
-builtinsList = M.fromList[(ParHead, return), (ParDeep, return)]
+parList :: NFData a => [a] -> [a]
+parList = (`P.using` P.parList P.rdeepseq)
 
 -----------------
 
@@ -97,8 +80,8 @@ changeModule :: Module -> EvalState m a -> EvalState m a
 changeModule modu state = state { getModule = modu }
 
 -- |change the builtin functions
-changeBuiltins ::  Builtins m -> ParBuiltinsSingle m a -> ParBuiltinsList m a -> EvalState t a -> EvalState m a
-changeBuiltins builtins pbs pbl state = state { getBuiltins = builtins }
+changeBuiltins ::  Builtins m -> EvalState t a -> EvalState m a
+changeBuiltins builtins state = state { getBuiltins = builtins }
 
 -- |an initial environment state
 initEvalState :: NFData a => EvalState IO a
@@ -242,7 +225,7 @@ builtinsIO = pureBuiltins `M.union` ioBuiltins
 
 -- |pure builtins in an arbitrary monad
 pureBuiltins :: Monad m => Builtins m
-pureBuiltins = M.fromList [("+", evalPlus id)
+pureBuiltins = M.fromList [("+", evalPlus)
                           ,("-", evalMinus)
                           ,("*", evalMul)
                           ,("/", evalDiv)
@@ -278,48 +261,6 @@ pureBuiltins = M.fromList [("+", evalPlus id)
                           ,("eval", evalEval)
                           ,("let", evalLet)
                           ,("letrec", evalLetrec)]
-
-
--- |pure builtins in an arbitrary monad
-parBuiltins :: Builtins MT.Identity
-parBuiltins = M.fromList [("+", evalPlus (`P.using` P.parList P.rdeepseq))
-                          ,("-", evalMinus)
-                          ,("*", evalMul)
-                          ,("/", evalDiv)
-                          ,("if", evalIf)
-                          ,("++", evalAppend)
-                          ,("zero?",      evalIs isZeroTest)
-                          ,("nil?",       evalIs isNilTest)
-                          ,("empty?",     evalIs isEmptyTest)
-                          ,("string?",    evalIs isStringTest)
-                          ,("integer?",   evalIs isIntegerTest)
-                          ,("real?",      evalIs isRealTest)
-                          ,("number?",    evalIs isNumberTest)
-                          ,("procedure?", evalIs isFunTest)
-                          ,("list?",      evalIs isListTest)
-                          ,("=",      evalCompare (compareAtoms (==)))
-                          ,("<>",     evalCompare (compareAtoms (/=)))
-                          ,("<",      evalCompare (compareAtoms (<)))
-                          ,(">",      evalCompare (compareAtoms (>)))
-                          ,("<=",     evalCompare (compareAtoms (<=)))
-                          ,(">=",     evalCompare (compareAtoms (>=)))
-                          ,("length", evalLength)
-                          ,("slice", evalSlice)
-                          ,("show", evalShow)
-                          ,("error", evalError)
-                          ,("try", evalTry)
-                          ,("trace", evalTrace)
-                          ,("list", evalList)
-                          ,("car", evalCar)
-                          ,("cdr", evalCdr)
-                          ,("lambda", evalLambda)
-                          ,("quote",  evalQuote)
-                          ,("mquote", evalQuote)
-                          ,("eval", evalEval)
-                          ,("let", evalLet)
-                          ,("letrec", evalLetrec)]
-
-
 
 
 -- |IO builtins in the IO monad
@@ -350,7 +291,7 @@ evalPure rootExpr = \case
   [element] -> do
     -- |evaluate an expression in a pure context
     state <- ask
-    case (MT.runIdentity $ MT.runExceptT $ MT.runReaderT (eval element) (state { getBuiltins = parBuiltins })) of
+    case (MT.runIdentity $ MT.runExceptT $ MT.runReaderT (eval element) (state { getBuiltins = pureBuiltins })) of
       Left err -> lift $ throwE err
       Right rs -> returnIO rs
   xs        -> throwErr (Just rootExpr) $  "bad arity, expected 1 argument, got: " ++ show (length xs)
@@ -359,7 +300,7 @@ evalPure rootExpr = \case
 -- |evaluate a 'do!' sequence of IO actions
 evalDo :: WithMD Expr -> [WithMD Expr] -> IOEval Expr
 evalDo rootExpr actions = do
-  evaluated <- MT.withReaderT (changeBuiltins builtinsIO builtinsSingle builtinsList) (evalSequence rootExpr actions) >>= fromIO
+  evaluated <- MT.withReaderT (changeBuiltins builtinsIO) (evalSequence rootExpr actions) >>= fromIO
   returnIO evaluated
 
 
@@ -625,7 +566,7 @@ isFunTest _             = False
 -- |evaluate 'list' expression
 evalList :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
 evalList (WithMD exprMD _) elements = do
-  evalled <- mapM eval elements
+  evalled <- sequence $ fmap eval elements
   lift $ return $ WithMD exprMD $ QUOTE $ WithMD exprMD $ LIST evalled
 
 -- |evaluate 'car' expression
@@ -663,37 +604,37 @@ evalEval rootExpr = \case
 
 
 -- |(+)
---evalPlus :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
-evalPlus parListF = evalArith parListF (return . sum) (return . sum)
+evalPlus :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
+evalPlus = evalArith (return . sum) (return . sum)
 
 -- |(-)
 evalMinus :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
-evalMinus = evalArith id (return . sub) (return . sub)
+evalMinus = evalArith (return . sub) (return . sub)
 
 -- |(*)
 evalMul :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
-evalMul = evalArith id (return . product) (return . product)
+evalMul = evalArith (return . product) (return . product)
 
 -- |(/)
 evalDiv :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
-evalDiv = evalArith id (divide div) (divide (/))
+evalDiv = evalArith (divide div) (divide (/))
 
 
 -- |evaluate arithmetic expressions. converts integers to floats if an argument is a float.
---evalArith :: Monad m => ([Integer] -> MT.ExceptT Error m Integer) -> ([Double] -> MT.ExceptT Error m Double) -> WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
-evalArith parListF intOp realOp rootExpr@(WithMD exprMD _) operands = do
-  results <- sequence $ parListF $ fmap (evalToNumber rootExpr) operands
+evalArith :: Monad m => ([Integer] -> MT.ExceptT Error m Integer) -> ([Double] -> MT.ExceptT Error m Double) -> WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
+evalArith intOp realOp rootExpr@(WithMD exprMD _) operands = do
+  results <- sequence $ fmap (evalToNumber rootExpr) operands
   if length (filter isReal results) > 0
   then
-    lift (realOp (map atomToDouble results) >>= return . WithMD exprMD . ATOM . Real)
+    lift ((realOp $ parList (map atomToDouble results)) >>= return . WithMD exprMD . ATOM . Real)
   else
-    lift (intOp (map atomToInteger results) >>= return . WithMD exprMD . ATOM . Integer)
+    lift ((intOp $ parList (map atomToInteger results)) >>= return . WithMD exprMD . ATOM . Integer)
 
 
 -- |evaluate '++' expression for lists and strings.
 evalAppend :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
 evalAppend rootExpr@(WithMD exprMD _) operands = do
-  mapM (evalToList rootExpr) operands >>= \res -> case sequence res of
+  (sequence $ fmap (evalToList rootExpr) operands) >>= \res -> case sequence res of
     Right results -> lift $ return $ WithMD exprMD $ QUOTE $ WithMD exprMD $ LIST $ foldl (++) [] results
     Left _ -> mapM (evalToString rootExpr) operands  >>= \result -> case sequence result of
       Right results -> lift $ return $ WithMD exprMD $ ATOM $ String $ foldl (++) "" results
