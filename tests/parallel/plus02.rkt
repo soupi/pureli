@@ -11,26 +11,28 @@
 
 (define test
   (+
+  (+
     (exponent 2 20000)
     (exponent 2 20001)
     (exponent 2 20002)
-    (exponent 2 20003)
+    (exponent 2 2003)
     (exponent 2 20004)
     (exponent 2 20005)
     (exponent 2 20006)
     (exponent 2 20007)
     (exponent 2 20008)
     (exponent 2 20009)
-    (exponent 2 20010)
+    (exponent 2 210)
     (exponent 2 20011)
     (exponent 2 20012)
     (exponent 2 20013)
     (exponent 2 20014)
     (exponent 2 20015)
     (exponent 2 20016)
-    (exponent 2 20017)
+    (exponent 2 217)
     (exponent 2 20018)
-    (exponent 2 20019)))
+    (exponent 2 219))
+  (trace 1 1) (trace 2 2) (trace 3 3) (trace 4 4) (trace 5 4)))
 
 (define main
   (do!

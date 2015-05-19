@@ -41,18 +41,20 @@ parList = (`P.using` P.parList P.rdeepseq)
 -----------------
 
 -- |type for evaluation
-type Evaluation m a = MT.ReaderT (EvalState m a) (MT.ExceptT Error m) (WithMD a)
+type Evaluation m a = MT.ReaderT (EvalState m) (MT.ExceptT Error m) (WithMD a)
+-- |a type of evaluation
+type MEval m a = MT.ReaderT (EvalState m) (MT.ExceptT Error m) a
 -- |evaluation in the identity monad
-type PureEval a = Evaluation MT.Identity a
+type PureEval a = MT.ReaderT (EvalState MT.Identity) (MT.ExceptT Error MT.Identity) a
 -- |evaluation in the io monad
 type IOEval a = Evaluation IO a
 
-instance NFData (MT.ReaderT (EvalState MT.Identity a) (MT.ExceptT Error MT.Identity) b)
+instance NFData (MT.ReaderT (EvalState MT.Identity) (MT.ExceptT Error MT.Identity) b)
 
 -- |environment and builtin function
-data EvalState m a = EvalState { getModule :: Module, getBuiltins :: Builtins m }
+data EvalState m = EvalState { getModule :: Module, getBuiltins :: Builtins m }
 
-getEnv :: EvalState m a -> Env
+getEnv :: EvalState m -> Env
 getEnv = getModEnv . getModule
 
 lookupInModule :: Name -> Module -> Maybe (WithMD Expr, Module)
@@ -68,23 +70,23 @@ lookupInModule name modul =
           Just m  -> lookupInModule (concat (tail namePath)) m
 
 -- |update the environnment with a function
-updateEnv ::  (Env -> Env) -> EvalState m a -> EvalState m a
+updateEnv ::  (Env -> Env) -> EvalState m -> EvalState m
 updateEnv f   state = state { getModule = (getModule state) { getModEnv = (f (getModEnv (getModule state))) } }
 
 -- |change the environment
-changeEnv ::  Env -> EvalState m a -> EvalState m a
+changeEnv ::  Env -> EvalState m -> EvalState m
 changeEnv env state = state { getModule = (getModule state) { getModEnv = env } }
 
 -- |change the module
-changeModule :: Module -> EvalState m a -> EvalState m a
+changeModule :: Module -> EvalState m -> EvalState m
 changeModule modu state = state { getModule = modu }
 
 -- |change the builtin functions
-changeBuiltins ::  Builtins m -> EvalState t a -> EvalState m a
+changeBuiltins ::  Builtins m -> EvalState t -> EvalState m
 changeBuiltins builtins state = state { getBuiltins = builtins }
 
 -- |an initial environment state
-initEvalState :: NFData a => EvalState IO a
+initEvalState :: EvalState IO
 initEvalState = EvalState (Module "" "REPL" [] emptyEnv emptyEnv emptyEnv emptyEnv) builtinsIO
 
 -- |empty Environment
@@ -623,7 +625,10 @@ evalDiv = evalArith (divide div) (divide (/))
 -- |evaluate arithmetic expressions. converts integers to floats if an argument is a float.
 evalArith :: Monad m => ([Integer] -> MT.ExceptT Error m Integer) -> ([Double] -> MT.ExceptT Error m Double) -> WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
 evalArith intOp realOp rootExpr@(WithMD exprMD _) operands = do
-  results <- sequence $ fmap (evalToNumber rootExpr) operands
+  state <- ask
+  results <- pureEvaluation (sequence $ fmap (evalToNumber rootExpr) operands) state
+
+  --results <- sequence $ fmap (evalToNumber rootExpr) operands
   if length (filter isReal results) > 0
   then
     lift ((realOp $ parList (map atomToDouble results)) >>= return . WithMD exprMD . ATOM . Real)
@@ -687,12 +692,13 @@ evalLength rootExpr@(WithMD exprMD _) operands =
 
 -- |slice: a slice of a string or list
 evalSlice :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
-evalSlice rootExpr@(WithMD exprMD _) operands =
+evalSlice rootExpr@(WithMD exprMD _) operands = do
+  state <- ask
   case operands of
     [value, start, end] -> do
       res <- sequence3 (evalToList rootExpr value
-               , evalToNumber rootExpr start >>= lift . return . castAtomToInteger rootExpr
-               , evalToNumber rootExpr end   >>= lift . return . castAtomToInteger rootExpr)
+               , pureEvaluation (evalToNumber rootExpr start) state >>= lift . return . castAtomToInteger rootExpr
+               , pureEvaluation (evalToNumber rootExpr end) state   >>= lift . return . castAtomToInteger rootExpr)
       case res of
         (Right l, Right s, Right e) -> lift $ return $ WithMD exprMD $ LIST $ take (fromIntegral (e - s)) $ drop (fromIntegral s) l
         (Left _, Right s, Right e) -> evalToString rootExpr value >>= \case
@@ -727,8 +733,16 @@ atomToDouble :: Atom -> Double
 atomToDouble (Real d) = d
 atomToDouble (Integer i) = fromIntegral i
 
+pureEvaluation :: Monad m => PureEval a -> EvalState m -> MEval m a
+pureEvaluation go state =
+  case MT.runIdentity $ MT.runExceptT $ MT.runReaderT go (changeBuiltins pureBuiltins state) of
+    Left err -> lift $ MT.throwE err
+    Right rs -> return rs
+
+
+
 -- |try to evaluate expression to a number
-evalToNumber :: Monad m => WithMD Expr -> WithMD Expr -> MT.ReaderT (EvalState m a) (MT.ExceptT Error m) Atom
+evalToNumber :: WithMD Expr -> WithMD Expr -> PureEval Atom
 evalToNumber rootExpr expr = do
     state <- ask
     case (MT.runIdentity $ MT.runExceptT $ MT.runReaderT (eval expr) (state { getBuiltins = builtinsID })) of
@@ -737,13 +751,13 @@ evalToNumber rootExpr expr = do
       Left x -> lift $ MT.throwE x
 
 -- |try to evaluate expression to a string
-evalToString :: Monad m => WithMD Expr -> WithMD Expr -> MT.ReaderT (EvalState m Expr) (MT.ExceptT Error m) (Either Error String)
+evalToString :: Monad m => WithMD Expr -> WithMD Expr -> MT.ReaderT (EvalState m) (MT.ExceptT Error m) (Either Error String)
 evalToString rootExpr expr = eval expr >>= \case
   (WithMD _ (ATOM (String str))) -> lift $ return $ Right str
   _ -> lift $ return $ Left $ Error (Just rootExpr) $ show expr ++ " is not a string"
 
 -- |try to evaluate expression to a list
-evalToList :: Monad m => WithMD Expr -> WithMD Expr -> MT.ReaderT (EvalState m Expr) (MT.ExceptT Error m) (Either Error [WithMD Expr])
+evalToList :: Monad m => WithMD Expr -> WithMD Expr -> MT.ReaderT (EvalState m) (MT.ExceptT Error m) (Either Error [WithMD Expr])
 evalToList rootExpr expr = eval expr >>= \case
   WithMD _ (QUOTE (WithMD _ (LIST list))) -> lift $ return $ Right list
   _ -> lift $ return $ Left $ Error (Just rootExpr) $ show expr ++ " is not a list"
