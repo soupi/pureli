@@ -1,0 +1,12 @@
+(module main)
+
+(define loop
+  loop)
+
+(define test
+  (+ (trace 1 1) (trace loop loop) (trace 3 3) (trace 4 4)))
+
+(define main
+  (do!
+    [let! x (pure test)]
+    [print! x]))

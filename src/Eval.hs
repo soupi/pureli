@@ -21,9 +21,8 @@ import qualified Data.Functor.Identity as MT
 import Data.Function (on)
 import qualified Data.Map as M
 import qualified Control.Parallel.Strategies as P
-import Control.DeepSeq (NFData)
 
-import Debug.Trace (traceShow)
+import Debug.Trace
 
 import Utils
 import AST
@@ -34,11 +33,8 @@ import Printer()
 -- Par Builtins
 -----------------
 
-
-parList :: NFData a => [a] -> [a]
-parList = (`P.using` P.parList P.rdeepseq)
-
-seqParMap f xs = sequence $ parList $ fmap f xs
+-- |the magic!!!
+seqParMap f xs = sequence $ (fmap f xs `P.using` P.parList P.rdeepseq)
 
 -----------------
 
@@ -51,7 +47,7 @@ type PureEval a = MT.ReaderT (EvalState MT.Identity) (MT.ExceptT Error MT.Identi
 -- |evaluation in the io monad
 type IOEval a = Evaluation IO a
 
-instance NFData (MT.ReaderT (EvalState MT.Identity) (MT.ExceptT Error MT.Identity) b)
+instance P.NFData Error
 
 -- |environment and builtin function
 data EvalState m = EvalState { getModule :: Module, getBuiltins :: Builtins m }
@@ -101,6 +97,17 @@ evalModule modul = do
   case M.lookup "main" (getModEnv modul) of
     Nothing   -> throwE $ Error Nothing $ "No main function in program \n*** " ++ (show $ map fst (M.toList (getModEnv modul)))
     Just expr -> MT.runReaderT (eval expr) (EvalState modul ioBuiltins)
+
+
+-- |evaluate an expression in pure context
+pureEval :: Module -> WithMD Expr -> Either Error (WithMD Expr)
+pureEval modul exprWithMD@(WithMD md expr) = do
+  flip pureEvaluation modul $
+    case expr of
+      ATOM a      -> evalAtom exprWithMD a
+      PROCEDURE p -> return $ WithMD md $ PROCEDURE p
+      QUOTE l     -> return $ WithMD md $ QUOTE l
+      LIST ls     -> evalOp exprWithMD ls
 
 
 -- |evaluate an expression
@@ -295,7 +302,9 @@ evalPure rootExpr = \case
   [element] -> do
     -- |evaluate an expression in a pure context
     state <- ask
-    pureEvaluation (eval element) state >>= returnIO
+    case pureEval (getModule state) element of
+      Left err -> lift $ MT.throwE err
+      Right rs -> returnIO rs
   xs        -> throwErr (Just rootExpr) $  "bad arity, expected 1 argument, got: " ++ show (length xs)
 
 
@@ -387,8 +396,6 @@ evalTrace rootExpr@(WithMD md _) = \case
   xs -> throwErr (Just rootExpr) $ "bad arity: expects 2 arguments, got " ++ show (length xs)
 
 
-
-
 -- |evaluate a 'try' expression. try will return the first expression that does not fail to evaluate
 evalTry :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
 evalTry rootExpr operands = go operands
@@ -476,8 +483,8 @@ evalIf rootExpr = \case
 evalCompare :: Monad m => (WithMD Expr-> Expr -> Expr -> MT.ExceptT Error m Bool) -> WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
 evalCompare test rootExpr@(WithMD exprMD _) operands = do
   -- |evaluate operands
-  state <- ask
-  evalled <- pureEvaluation (seqParMap eval operands) state
+  modul <- ask >>= return . getModule
+  evalled <- mapM eval operands
   -- |test and return
   lift (testCompare rootExpr test evalled) >>= \case
     True  -> return $ WithMD exprMD $ ATOM $ Bool True
@@ -626,26 +633,29 @@ evalDiv = evalArith (divide div) (divide (/))
 -- |evaluate arithmetic expressions. converts integers to floats if an argument is a float.
 evalArith :: Monad m => ([Integer] -> MT.ExceptT Error m Integer) -> ([Double] -> MT.ExceptT Error m Double) -> WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
 evalArith intOp realOp rootExpr@(WithMD exprMD _) operands = do
-  state <- ask
-  results <- pureEvaluation (seqParMap (evalToNumber rootExpr) operands) state
-
-  --results <- sequence $ fmap (evalToNumber rootExpr) operands
+  modul <- return . getModule =<< ask
+  let res = seqParMap (evalToNumber modul rootExpr) operands
+  results <- case res of
+               Left err -> lift $ MT.throwE err
+               Right rs -> return rs
   if length (filter isReal results) > 0
   then
-    lift ((realOp $ parList (map atomToDouble results)) >>= return . WithMD exprMD . ATOM . Real)
+    lift ((realOp $ (fmap atomToDouble results)) >>= return . WithMD exprMD . ATOM . Real)
   else
-    lift ((intOp $ parList (map atomToInteger results)) >>= return . WithMD exprMD . ATOM . Integer)
+    lift ((intOp $ (fmap atomToInteger results)) >>= return . WithMD exprMD . ATOM . Integer)
 
 
 -- |evaluate '++' expression for lists and strings.
 evalAppend :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
 evalAppend rootExpr@(WithMD exprMD _) operands = do
-  state <- ask
+  state <- return . getModule =<< ask
   (sequence $ fmap (evalToList rootExpr) operands) >>= \res -> case sequence res of
     Right results -> lift $ return $ WithMD exprMD $ QUOTE $ WithMD exprMD $ LIST $ foldl (++) [] results
-    Left _ -> pureEvaluation (seqParMap (evalToString rootExpr) operands) state >>= \result -> case sequence result of
-      Right results -> lift $ return $ WithMD exprMD $ ATOM $ String $ foldl (++) "" results
-      Left _ -> throwErr (Just rootExpr) "bad arguments to append. all arguments must be of type string or list."
+    Left _ -> do
+        result <- mapM (evalToString rootExpr) operands
+        case sequence result of
+          Right results -> lift $ return $ WithMD exprMD $ ATOM $ String $ foldl (++) "" results
+          Left _ -> throwErr (Just rootExpr) "bad arguments to append. all arguments must be of type string or list."
 
 
 
@@ -695,12 +705,13 @@ evalLength rootExpr@(WithMD exprMD _) operands =
 -- |slice: a slice of a string or list
 evalSlice :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
 evalSlice rootExpr@(WithMD exprMD _) operands = do
-  state <- ask
+  modul <- return . getModule =<< ask
   case operands of
     [value, start, end] -> do
-      res <- sequence3 (evalToList rootExpr value
-               , pureEvaluation (evalToNumber rootExpr start) state >>= lift . return . castAtomToInteger rootExpr
-               , pureEvaluation (evalToNumber rootExpr end) state   >>= lift . return . castAtomToInteger rootExpr)
+      res <- sequence3
+                (evalToList rootExpr value
+               ,evalAndGetInt modul rootExpr start
+               ,evalAndGetInt modul rootExpr end)
       case res of
         (Right l, Right s, Right e) -> lift $ return $ WithMD exprMD $ LIST $ take (fromIntegral (e - s)) $ drop (fromIntegral s) l
         (Left _, Right s, Right e) -> evalToString rootExpr value >>= \case
@@ -710,6 +721,11 @@ evalSlice rootExpr@(WithMD exprMD _) operands = do
         (_, _, Left e) -> lift $ MT.throwE e
     vs -> throwErr (Just rootExpr) $ " arity problem: expecting 3 arguments, got " ++ show (length vs)
 
+evalAndGetInt modul rootExpr e = do
+  r <- case evalToNumber modul rootExpr e of
+         Right x -> return x
+         Left er -> lift $ MT.throwE er
+  lift $ return $ castAtomToInteger rootExpr r
 
 sequence3 :: Monad m => (m a, m b, m c) -> m (a, b, c)
 sequence3 (x,y,z) = do
@@ -735,22 +751,19 @@ atomToDouble :: Atom -> Double
 atomToDouble (Real d) = d
 atomToDouble (Integer i) = fromIntegral i
 
-pureEvaluation :: Monad m => PureEval a -> EvalState m -> MEval m a
-pureEvaluation go state =
-  case MT.runIdentity $ MT.runExceptT $ MT.runReaderT go (changeBuiltins pureBuiltins state) of
-    Left err -> lift $ MT.throwE err
-    Right rs -> return rs
+pureEvaluation :: PureEval a -> Module -> Either Error a
+pureEvaluation go m =
+  MT.runIdentity $ MT.runExceptT $ MT.runReaderT go (EvalState m pureBuiltins)
 
 
 
 -- |try to evaluate expression to a number
-evalToNumber :: WithMD Expr -> WithMD Expr -> PureEval Atom
-evalToNumber rootExpr expr = do
-    state <- ask
-    case (MT.runIdentity $ MT.runExceptT $ MT.runReaderT (eval expr) (state { getBuiltins = builtinsID })) of
-      Right (WithMD _ (ATOM a)) -> if isNumber a then lift (return a) else throwErr (Just rootExpr) $ show a ++ " not a number"
-      Right _        -> throwErr (Just rootExpr) $ show expr ++ " not a number"
-      Left x -> lift $ MT.throwE x
+evalToNumber :: Module -> WithMD Expr -> WithMD Expr -> Either Error Atom
+evalToNumber modul rootExpr expr = do
+    case pureEval modul expr of
+      Right (WithMD _ (ATOM a)) -> if isNumber a then (return a) else Left $ Error (Just rootExpr) $ show a ++ " not a number"
+      Right _        -> Left $ Error (Just rootExpr) $ show expr ++ " not a number"
+      Left x -> Left x
 
 -- |try to evaluate expression to a string
 evalToString :: Monad m => WithMD Expr -> WithMD Expr -> MT.ReaderT (EvalState m) (MT.ExceptT Error m) (Either Error String)
