@@ -38,6 +38,8 @@ import Printer()
 parList :: NFData a => [a] -> [a]
 parList = (`P.using` P.parList P.rdeepseq)
 
+seqParMap f xs = sequence $ parList $ fmap f xs
+
 -----------------
 
 -- |type for evaluation
@@ -293,9 +295,7 @@ evalPure rootExpr = \case
   [element] -> do
     -- |evaluate an expression in a pure context
     state <- ask
-    case (MT.runIdentity $ MT.runExceptT $ MT.runReaderT (eval element) (state { getBuiltins = pureBuiltins })) of
-      Left err -> lift $ throwE err
-      Right rs -> returnIO rs
+    pureEvaluation (eval element) state >>= returnIO
   xs        -> throwErr (Just rootExpr) $  "bad arity, expected 1 argument, got: " ++ show (length xs)
 
 
@@ -476,7 +476,8 @@ evalIf rootExpr = \case
 evalCompare :: Monad m => (WithMD Expr-> Expr -> Expr -> MT.ExceptT Error m Bool) -> WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
 evalCompare test rootExpr@(WithMD exprMD _) operands = do
   -- |evaluate operands
-  evalled <- mapM eval operands
+  state <- ask
+  evalled <- pureEvaluation (seqParMap eval operands) state
   -- |test and return
   lift (testCompare rootExpr test evalled) >>= \case
     True  -> return $ WithMD exprMD $ ATOM $ Bool True
@@ -626,7 +627,7 @@ evalDiv = evalArith (divide div) (divide (/))
 evalArith :: Monad m => ([Integer] -> MT.ExceptT Error m Integer) -> ([Double] -> MT.ExceptT Error m Double) -> WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
 evalArith intOp realOp rootExpr@(WithMD exprMD _) operands = do
   state <- ask
-  results <- pureEvaluation (sequence $ fmap (evalToNumber rootExpr) operands) state
+  results <- pureEvaluation (seqParMap (evalToNumber rootExpr) operands) state
 
   --results <- sequence $ fmap (evalToNumber rootExpr) operands
   if length (filter isReal results) > 0
@@ -639,9 +640,10 @@ evalArith intOp realOp rootExpr@(WithMD exprMD _) operands = do
 -- |evaluate '++' expression for lists and strings.
 evalAppend :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
 evalAppend rootExpr@(WithMD exprMD _) operands = do
+  state <- ask
   (sequence $ fmap (evalToList rootExpr) operands) >>= \res -> case sequence res of
     Right results -> lift $ return $ WithMD exprMD $ QUOTE $ WithMD exprMD $ LIST $ foldl (++) [] results
-    Left _ -> mapM (evalToString rootExpr) operands  >>= \result -> case sequence result of
+    Left _ -> pureEvaluation (seqParMap (evalToString rootExpr) operands) state >>= \result -> case sequence result of
       Right results -> lift $ return $ WithMD exprMD $ ATOM $ String $ foldl (++) "" results
       Left _ -> throwErr (Just rootExpr) "bad arguments to append. all arguments must be of type string or list."
 
