@@ -1,18 +1,7 @@
-Purr-lang
+Project-lang
 =========
 
 A purely functional, dynamically typed, lisp-like toy programming language interpreter written in Haskell.
-
-Installation
-------------
-
-```sh
-git clone https://github.com/soupi/purr-lang
-cd purr-lang
-cabal sandbox init
-cabal install
-```
-
 
 
 Atomic Expressions
