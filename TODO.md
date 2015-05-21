@@ -4,7 +4,10 @@ TODO
 - Test Test Test
 - Handle duplications of arguments and definitions
 - ~~IO: read/write from/to files (!)~~
-- Parallelism (!)
+- Parallelism (!):
+>- append
+>- list
+>- let
 - Standard library (!)
 - Syntax highlight
 - Runtime of parallel execuation data processing (!)

@@ -33,7 +33,10 @@ symbol :: P.Parser Atom
 symbol = Symbol <$> L.identifier
 
 escapeChar :: P.Parser Char
-escapeChar = P.char '\\' >> P.anyChar
+escapeChar = P.char '\\' >> P.choice (zipWith escapedChar codes replacements)
+  where escapedChar code replacement = P.char code >> return replacement
+        codes        = ['b',  'n',  'f',  'r',  't',  '\\', '\"', '/']
+        replacements = ['\b', '\n', '\f', '\r', '\t', '\\', '\"', '/']
 
 bool :: P.Parser Atom
 bool = do
