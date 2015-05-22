@@ -274,7 +274,7 @@ type Builtins m = M.Map Name (WithMD Expr -> [WithMD Expr] -> Evaluation m Expr)
 
 -- |pure builtins in the identity monad
 builtinsID :: Builtins MT.Identity
-builtinsID = pureBuiltins
+builtinsID = pureContextBuiltins
 
 -- |all builtins in the IO monad
 builtinsIO :: Builtins IO
@@ -283,50 +283,65 @@ builtinsIO = pureBuiltins `M.union` ioBuiltins
 
 -- |pure builtins in an arbitrary monad
 pureBuiltins :: Monad m => Builtins m
-pureBuiltins = M.fromList [("+", evalPlus)
-                          ,("-", evalMinus)
-                          ,("*", evalMul)
-                          ,("/", evalDiv)
-                          ,("if", evalIf)
-                          ,("++", evalAppend)
-                          ,("zero?",      evalIs isZeroTest)
-                          ,("nil?",       evalIs isNilTest)
-                          ,("empty?",     evalIs isEmptyTest)
-                          ,("string?",    evalIs isStringTest)
-                          ,("integer?",   evalIs isIntegerTest)
-                          ,("real?",      evalIs isRealTest)
-                          ,("number?",    evalIs isNumberTest)
-                          ,("procedure?", evalIs isFunTest)
-                          ,("list?",      evalIs isListTest)
-                          ,("=",      evalCompare (compareAtoms (==)))
-                          ,("<>",     evalCompare (compareAtoms (/=)))
-                          ,("<",      evalCompare (compareAtoms (<)))
-                          ,(">",      evalCompare (compareAtoms (>)))
-                          ,("<=",     evalCompare (compareAtoms (<=)))
-                          ,(">=",     evalCompare (compareAtoms (>=)))
-                          ,("length", evalLength)
-                          ,("slice", evalSlice)
-                          ,("show", evalShow)
-                          ,("error", evalError)
-                          ,("try", evalTry)
-                          ,("trace", evalTrace)
-                          ,("list", evalList)
-                          ,("car", evalCar)
-                          ,("cdr", evalCdr)
-                          ,("lambda", evalLambda)
-                          ,("quote",  evalQuote)
-                          ,("mquote", evalQuote)
-                          ,("eval", evalEval)
-                          ,("let", evalLet)
-                          ,("letrec", evalLetrec)]
+pureBuiltins =
+  M.fromList
+    [(";evalProcedure", flip evalProcedure)
+    ]
+  `M.union`
+  M.fromList
+    [("+", evalPlus)
+    ,("-", evalMinus)
+    ,("*", evalMul)
+    ,("/", evalDiv)
+    ,("if", evalIf)
+    ,("++", evalAppend)
+    ,("zero?",      evalIs isZeroTest)
+    ,("nil?",       evalIs isNilTest)
+    ,("empty?",     evalIs isEmptyTest)
+    ,("string?",    evalIs isStringTest)
+    ,("integer?",   evalIs isIntegerTest)
+    ,("real?",      evalIs isRealTest)
+    ,("number?",    evalIs isNumberTest)
+    ,("procedure?", evalIs isFunTest)
+    ,("list?",      evalIs isListTest)
+    ,("=",      evalCompare (compareAtoms (==)))
+    ,("<>",     evalCompare (compareAtoms (/=)))
+    ,("<",      evalCompare (compareAtoms (<)))
+    ,(">",      evalCompare (compareAtoms (>)))
+    ,("<=",     evalCompare (compareAtoms (<=)))
+    ,(">=",     evalCompare (compareAtoms (>=)))
+    ,("length", evalLength)
+    ,("slice", evalSlice)
+    ,("show", evalShow)
+    ,("error", evalError)
+    ,("try", evalTry)
+    ,("trace", evalTrace)
+    ,("list", evalList)
+    ,("car", evalCar)
+    ,("cdr", evalCdr)
+    ,("lambda", evalLambda)
+    ,("quote",  evalQuote)
+    ,("mquote", evalQuote)
+    ,("eval", evalEval)
+    ,("let", evalLet)
+    ,("letrec", evalLetrec)]
+
+
+
+
 
 pureContextBuiltins :: Builtins MT.Identity
-pureContextBuiltins = M.fromList [(";evalProcedure", flip pureEvalProcedure)] `M.union` pureBuiltins
+pureContextBuiltins =
+  M.fromList
+    [(";evalProcedure", flip pureEvalProcedure)
+    ,("let", pureEvalLet)
+    ,("++", pureEvalAppend)
+    ,("list", pureEvalList)]
+  `M.union` pureBuiltins
 
 -- |IO builtins in the IO monad
 ioBuiltins :: Builtins IO
-ioBuiltins = M.fromList [(";evalProcedure", flip evalProcedure)
-                        ,("pure",  evalPure)
+ioBuiltins = M.fromList [("pure",  evalPure)
                         ,("do!",    evalDo)
                         ,("print!", evalPrint)
                         ,("read!",  evalRead)
@@ -477,7 +492,7 @@ evalLambda rootExpr@(WithMD exprMD _) exprs = do
       lift $ return $ WithMD exprMD $ PROCEDURE $ Closure env $ WithMD exprMD $ Fun (FunArgsList argName) body
     [WithMD _ (LIST symbolList), bodyExpr@(WithMD _ body)] -> do
       -- |check for duplicate argument names
-      symbols <- lift $ mapM toSymbol symbolList
+      symbols <- liftFromEither $ seqParMap toSymbol symbolList
       if length (duplicates symbols) > 0
       then throwErr (Just bodyExpr) $ "lambda arguments must have different names"
       -- |return a procedure
@@ -518,6 +533,24 @@ evalLet rootExpr = \case
               _  -> throwErr (Just rootExpr) $ "unexpected binds in let expression"
     _ -> throwErr (Just rootExpr) $ "argument to let is not a list of bindings"
   ls -> throwErr (Just rootExpr) $ "let expects 2 arguments, got " ++ show (length ls)
+
+
+-- |evaluate a 'let' expression
+pureEvalLet :: WithMD Expr -> [WithMD Expr] -> PureEval (WithMD Expr)
+pureEvalLet rootExpr operands = do
+  modul <- return . getModule =<< ask
+  case operands of
+    -- |check arity
+    [binders, body] -> case binders of
+      -- |evaluate binds and evaluate body in extended environment
+      WithMD _ (LIST binds) -> liftFromEither (seqParMap evalLetBind binds) >>= \evaluated_binds -> liftFromEither $ pureEval (modul { getModEnv = M.fromList (evaluated_binds) `M.union` (getModEnv modul) }) body
+        where evalLetBind = \case
+      -- |^evaluate binds
+                WithMD _ (LIST [WithMD _ (ATOM (Symbol name)), expr]) -> pureEval modul expr >>= \result -> return $ (name, result)
+                _  -> Left $ Error (Just rootExpr) $ "unexpected binds in let expression"
+      _ -> throwErr (Just rootExpr) $ "argument to let is not a list of bindings"
+    ls -> throwErr (Just rootExpr) $ "let expects 2 arguments, got " ++ show (length ls)
+
 
 
 -- |evaluate an 'if' expression. '#f' is false, everything else is true.
@@ -629,6 +662,14 @@ evalList (WithMD exprMD _) elements = do
   evalled <- sequence $ fmap eval elements
   lift $ return $ WithMD exprMD $ QUOTE $ WithMD exprMD $ LIST evalled
 
+-- |evaluate 'list' expression in pure context
+pureEvalList :: WithMD Expr -> [WithMD Expr] -> PureEval (WithMD Expr)
+pureEvalList (WithMD exprMD _) elements = do
+  modul <- return . getModule =<< ask
+  evalled <- liftFromEither $ seqParMap (pureEval modul) elements
+  lift $ return $ WithMD exprMD $ QUOTE $ WithMD exprMD $ LIST evalled
+
+
 -- |evaluate 'car' expression
 evalCar :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
 evalCar rootExpr = \case
@@ -705,6 +746,20 @@ evalAppend rootExpr@(WithMD exprMD _) operands =
 
 
 
+-- |evaluate '++' expression for lists and strings.
+pureEvalAppend :: WithMD Expr -> [WithMD Expr] -> PureEval (WithMD Expr)
+pureEvalAppend rootExpr@(WithMD exprMD _) operands = do
+  modul <- return . getModule =<< ask
+  case (seqParMap (pureEvalToList modul rootExpr) operands) of
+    Right results -> lift $ return $ WithMD exprMD $ QUOTE $ WithMD exprMD $ LIST $ foldl (++) [] results
+    Left _ -> do
+        case seqParMap (pureEvalToString modul rootExpr) operands of
+          Right results -> lift $ return $ WithMD exprMD $ ATOM $ String $ foldl (++) "" results
+          Left _ -> throwErr (Just rootExpr) "bad arguments to append. all arguments must be of type string or list."
+
+
+
+
 -- |test if atom is real
 isReal :: Atom -> Bool
 isReal = \case
@@ -730,9 +785,9 @@ isSymbol (WithMD _ (ATOM (Symbol _))) = True
 isSymbol _                            = False
 
 -- |try converting an expression to a symbol
-toSymbol :: Monad m => WithMD Expr -> MT.ExceptT Error m String
+toSymbol :: WithMD Expr -> Either Error String
 toSymbol (WithMD _ (ATOM (Symbol s))) = return s
-toSymbol expr                         = throwE $ Error (Just expr)  "expecting a symbol"
+toSymbol expr                         = Left $ Error (Just expr)  "expecting a symbol"
 
 
 
@@ -827,7 +882,14 @@ evalToList rootExpr expr = eval expr >>= \case
   WithMD _ (QUOTE (WithMD _ (LIST list))) -> lift $ return $ Right list
   _ -> lift $ return $ Left $ Error (Just rootExpr) $ show expr ++ " is not a list"
 
--- |try to evaluate expression to a list in pure context
+
+-- |try to evaluate expression to a string
+pureEvalToString :: Module -> WithMD Expr -> WithMD Expr -> Either Error String
+pureEvalToString modul rootExpr expr = pureEval modul expr >>= \case
+  (WithMD _ (ATOM (String str))) -> Right str
+  _ -> Left $ Error (Just rootExpr) $ show expr ++ " is not a string"
+
+-- |try to evaluate expression to a list
 pureEvalToList :: Module -> WithMD Expr -> WithMD Expr -> Either Error [WithMD Expr]
 pureEvalToList modul rootExpr expr = pureEval modul expr >>= \case
   WithMD _ (QUOTE (WithMD _ (LIST list))) -> Right list

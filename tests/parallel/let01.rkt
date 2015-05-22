@@ -1,0 +1,21 @@
+(module main)
+
+
+; should create 9 sparks, 1 for each + argument
+(define add-plus (a b c)
+  (let ((d (+ a 1)) (e (+ b 2)) (f (+ c 3)))
+    (+ d e f)))
+
+
+; should create 6 sparks, 1 for each argument of +
+(define io-add-plus (a b c)
+  (let ((d (print! (+ a 1))) (e (print! (+ b 2))) (f (print! (+ c 3))))
+    (pure 12)))
+
+(define main
+  (do!
+    (print! "Expected number of sparks: 18")
+    (let! results (pure (add-plus 1 2 3))) ; should create 3 sparks for each argument in function call
+    (print! results)
+    (let! results (io-add-plus 1 2 3))
+    (print! results)))
