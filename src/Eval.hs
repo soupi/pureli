@@ -814,7 +814,7 @@ evalSlice rootExpr@(WithMD exprMD _) operands = do
                ,evalAndGetInt modul rootExpr start
                ,evalAndGetInt modul rootExpr end)
       case res of
-        (Right l, Right s, Right e) -> lift $ return $ WithMD exprMD $ LIST $ take (fromIntegral (e - s)) $ drop (fromIntegral s) l
+        (Right l, Right s, Right e) -> lift $ return $ WithMD exprMD $ QUOTE $ WithMD exprMD $ LIST $ take (fromIntegral (e - s)) $ drop (fromIntegral s) l
         (Left _, Right s, Right e) -> evalToString rootExpr value >>= \case
           Left _  -> throwErr (Just value) "not of type string or list"
           Right str -> lift $ return $ WithMD exprMD $ ATOM $ String $ take (fromIntegral (e - s)) $ drop (fromIntegral s) str
