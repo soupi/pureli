@@ -1,15 +1,9 @@
-{-
- ================
-    NOT READY
- ================
- -}
-
 
 {-# LANGUAGE LambdaCase #-}
 
 -- |
 -- Create a module before evaluation
-module Module where
+module Pureli.Module where
 
 import Data.Maybe  (fromMaybe)
 import Data.Either (partitionEithers)
@@ -20,11 +14,11 @@ import qualified Control.Monad.Trans.State.Strict as MT
 import qualified Data.Functor.Identity as MT
 import qualified Data.Map as M
 
-import AST
-import Utils
-import Parser
-import Printer()
-import Preprocess
+import Pureli.AST
+import Pureli.Utils
+import Pureli.Parser
+import Pureli.Printer()
+import Pureli.Preprocess
 
 -- |
 -- read module definitions from file

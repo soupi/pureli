@@ -5,7 +5,7 @@ module Main where
 
 import System.Environment (getArgs)
 
-import Run
+import Pureli.Run
 
 main :: IO ()
 main = getArgs >>= run

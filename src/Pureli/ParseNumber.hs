@@ -1,10 +1,10 @@
-module ParseNumber (parseNumber) where
+module Pureli.ParseNumber (parseNumber) where
 
 import Text.ParserCombinators.Parsec hiding (spaces)
 
 import Numeric (readOct, readHex, readFloat)
 
-import AST
+import Pureli.AST
 
 parseNumber :: Parser Atom
 parseNumber = try parseNum

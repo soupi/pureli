@@ -3,7 +3,7 @@
 
 {-# LANGUAGE DeriveGeneric #-}
 
-module AST where
+module Pureli.AST where
 
 import qualified Data.Map    as M
 import qualified Text.Parsec as P  (SourcePos)

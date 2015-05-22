@@ -1,4 +1,4 @@
-module Lexer where
+module Pureli.Lexer where
 
 import Text.Parsec.String (Parser)
 import Text.Parsec.Language (emptyDef)

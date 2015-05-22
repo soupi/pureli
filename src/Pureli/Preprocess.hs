@@ -1,5 +1,5 @@
 -- |a module to preprocess macros
-module Preprocess (preprocess, preprocessModule) where
+module Pureli.Preprocess (preprocess, preprocessModule) where
 
 import Control.Applicative ((<$>))
 import Prelude hiding (mapM)
@@ -11,9 +11,9 @@ import qualified Control.Monad.Trans.Except as MT
 import qualified Data.Functor.Identity as MT
 import qualified Data.Map as M
 
-import Utils
-import AST
-import Printer()
+import Pureli.Utils
+import Pureli.AST
+import Pureli.Printer()
 
 import Debug.Trace
 

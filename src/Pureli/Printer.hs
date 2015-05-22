@@ -1,11 +1,11 @@
 {-# LANGUAGE LambdaCase #-}
 
 -- |a way to print expressions
-module Printer where
+module Pureli.Printer where
 
 import qualified Data.Map as M (toList)
 
-import AST
+import Pureli.AST
 
 ---------------
 -- Instances

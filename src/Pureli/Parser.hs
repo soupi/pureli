@@ -1,6 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 
-module Parser (parseExpr, parseFile) where
+module Pureli.Parser (parseExpr, parseFile) where
 
 import Control.Applicative (pure, (<$>))
 
@@ -9,10 +9,10 @@ import Text.ParserCombinators.Parsec ((<|>))
 import qualified Text.Parsec as P
 import qualified Text.Parsec.String as P (Parser)
 
-import AST
-import Printer()
-import qualified Lexer as L
-import ParseNumber
+import Pureli.AST
+import Pureli.Printer()
+import qualified Pureli.Lexer as L
+import Pureli.ParseNumber
 
 parensOrBrackets :: P.Parser a -> P.Parser a
 parensOrBrackets parser = L.parens parser <|> L.brackets parser

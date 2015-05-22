@@ -1,14 +1,9 @@
-{-
- ===============
-    NOT READY
- ===============
- -}
 
 {-# LANGUAGE LambdaCase #-}
 
 -- |
 -- execution module
-module Run where
+module Pureli.Run (run) where
 
 import Control.Monad (unless)
 import Control.Monad.Trans.Except
@@ -19,10 +14,10 @@ import System.Directory (setCurrentDirectory)
 import qualified System.FilePath.Posix   as P (takeDirectory, takeFileName)
 import qualified System.FilePath.Windows as W (takeDirectory, takeFileName)
 
-import AST
-import Parser
-import Module
-import Eval
+import Pureli.AST
+import Pureli.Parser
+import Pureli.Module
+import Pureli.Eval
 
 -- |
 -- interprets a file or runs the REPL depending on the number of arguments

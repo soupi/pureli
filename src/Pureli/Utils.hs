@@ -1,14 +1,14 @@
 
 -- |
 -- a utility module
-module Utils where
+module Pureli.Utils where
 
 import Data.List (group, sort)
 import qualified Control.Monad.Trans.Except as MT
 import qualified Control.Monad.Trans.Class  as MT
 
-import AST
-import Printer()
+import Pureli.AST
+import Pureli.Printer()
 
 -- |
 -- Error might contain the problematic expression with it's metadata and an error message.

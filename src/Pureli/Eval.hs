@@ -1,14 +1,9 @@
-{-
- ================
-    NOT READY
- ================
- -}
 
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 
-module Eval (initEvalState, eval, evalModule) where
+module Pureli.Eval (initEvalState, eval, evalModule) where
 
 import Control.Exception (IOException, catch)
 import Data.List (find)
@@ -24,9 +19,9 @@ import qualified Control.Parallel.Strategies as P
 
 import Debug.Trace
 
-import Utils
-import AST
-import Printer()
+import Pureli.Utils
+import Pureli.AST
+import Pureli.Printer()
 
 
 -----------------
