@@ -808,7 +808,7 @@ evalSlice :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
 evalSlice rootExpr@(WithMD exprMD _) operands = do
   modul <- return . getModule =<< ask
   case operands of
-    [value, start, end] -> do
+    [start, end, value] -> do
       res <- sequence3
                 (evalToList rootExpr value
                ,evalAndGetInt modul rootExpr start
