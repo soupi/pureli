@@ -6,7 +6,7 @@ TODO
 - ~~IO: read/write from/to files (!)~~
 - ~~~Parallelism (!)~~
 - Standard library (!)
-- Syntax highlight
+- ~~Syntax highlight~~ for Atom: copy `language-pureli` directory to `~/.atom/packages/`
 - Runtime of parallel execuation data processing (!)
 - Abstract away +RTS and such
 - REPL with definitions and environment (?)

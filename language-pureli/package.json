@@ -1,0 +1,11 @@
+{
+  "name": "language-pureli",
+  "version": "0.1.0",
+  "description": "Syntax support for pureli language",
+  "license": "MIT",
+  "engines": {
+    "atom": ">0.50.0"
+  },
+  "dependencies": {},
+  "_id": "language-pureli@0.1.0"
+}

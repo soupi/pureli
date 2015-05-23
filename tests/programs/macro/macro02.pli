@@ -18,6 +18,6 @@
 
 (module test)
 
-(require "macro02.rkt" main)
+(require "macro02.pli" main)
 
 (define x 5)

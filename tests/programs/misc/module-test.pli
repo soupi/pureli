@@ -1,6 +1,6 @@
 (module main)
 
-(require "std.rkt" std (id elem))
+(require "std.pli" std (id elem))
 
 (define main
   (do!

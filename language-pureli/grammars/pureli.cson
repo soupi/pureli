@@ -1,0 +1,470 @@
+name: "Pureli"
+scopeName: "source.pureli"
+fileTypes: [
+  "pli"
+  "￿"
+]
+foldingStartMarker: '''
+  (?x)^ [ \t]* \(
+  	  (?<par>
+  	    ( [^()\n]++ | \( \g<par> \)? )*+
+  	  )
+  	$
+'''
+foldingStopMarker: "^\\s*$"
+patterns: [
+  {
+    include: "#comment"
+  }
+  {
+    include: "#sexp"
+  }
+  {
+    include: "#string"
+  }
+  {
+    include: "#language-functions"
+  }
+  {
+    include: "#quote"
+  }
+  {
+    include: "#constants"
+  }
+  {
+    include: "#illegal"
+  }
+]
+repository:
+  comment:
+    patterns: [
+      {
+        captures:
+          "1":
+            name: "punctuation.definition.comment.pureli"
+        match: "(;).*$\\n?"
+        name: "comment.line.semicolon.pureli"
+      }
+      {
+        begin: "{~"
+        captures:
+          "0":
+            name: "punctuation.definition.comment.pureli"
+        end: "~}"
+        name: "comment.multiline.pureli"
+      }
+    ]
+  constants:
+    patterns: [
+      {
+        match: "#[t|f]"
+        name: "constant.language.boolean.pureli"
+      }
+      {
+        match: "(#:)([[:alnum:]][[:alnum:]!$%&*+-./:<=>?@^_~]*)(?=[\\s\\)])"
+        name: "constant.keyword.pureli"
+      }
+      {
+        match: "(?<=[\\(\\s])((#e|#i)?[0-9]+(\\.[0-9]+)?|(#x)[0-9a-fA-F]+|(#o)[0-7]+|(#b)[01]+)(?=[\\s;()'\",\\[\\]])"
+        name: "constant.numeric.pureli"
+      }
+    ]
+  illegal:
+    match: "[()]"
+    name: "invalid.illegal.parenthesis.pureli"
+  "language-functions":
+    patterns: [
+      {
+        match: '''
+          (?x)
+          						(?<=(\\(|\\[)) # preceded by ( or \[
+          						( or|and|else|if|
+          						  cond|let|let\\*|
+          						  letrec)
+          						(?=(\\s|\\())
+        '''
+        name: "keyword.control.pureli"
+      }
+      {
+        match: '''
+          (?x)
+          						(?<=(\\()) # preceded by (
+          						( defmacro|require|module
+          						)
+          						(?=(\\s|\\())
+        '''
+        name: "keyword.toplevel.pureli"
+      }
+      {
+        comment: '''
+
+          						These functions run a test, and return a boolean
+          						answer.
+
+        '''
+        match: '''
+          (?x)
+          						(?<=(\\s|\\()) # preceded by space or (
+          						(
+          						  (?:char|string)(?:-ci)?(?:=|<=?|>=?)|
+          						  zero|empty|nil|number|real|integer|list|string|procedure
+          						)
+          						(\\?)		# name ends with ? sign
+          						(?=(\\s|\\()) # followed by space or (
+
+        '''
+        name: "support.function.boolean-test.pureli"
+      }
+      {
+        comment: '''
+
+          						These functions are potentially dangerous because
+          						they have side-effects which could affect other
+          						parts of the program.
+
+        '''
+        match: '''
+          (?x)
+          						(?<=(\\(|\\[)) # preceded by ( or \[
+          						(
+          						  do|let|print|read|print-file|read-file
+          						)
+          						(!)			# name ends with ! sign
+          						(?=(\\s|\\()) # followed by space or (
+
+        '''
+        name: "support.function.with-side-effects.pureli"
+      }
+      {
+        comment: '''
+
+          						pure function
+
+        '''
+        match: '''
+          (?x)
+          						(?<=(\\(|\\[)) # preceded by ( or \[
+          						( pure
+          						)
+          						(?=(\\s|\\()) # followed by space or (
+
+        '''
+        name: "support.function.pure.pureli"
+      }
+      {
+        comment: '''
+
+          						+, -, *, /, =, >, etc.
+
+        '''
+        match: "(?<=(\\s|\\())( >=?|<=?|=|<>|[*/+-])(?=(\\s|\\())"
+        name: "keyword.operator.arithmetic.pureli"
+      }
+      {
+        match: '''
+          (?x)
+          						(?<=(\\s|\\()) # preceded by space or (
+          						(
+                        length|list|slice|show|nil|quote|mqoute|eval|error|try|trace|
+                        # cons, car, cdr, etc
+          						  cons|c(a|d){1,4}r|
+
+          						  # unary math operators
+          						  abs|acos|angle|asin|assoc|assq|assv|atan|ceiling|
+          						  cos|floor|round|sin|sqrt|tan|
+          						  (?:real|imag)-part|numerator|denominator
+
+          						  # other math operators
+          						  modulo|exp|expt|remainder|quotient|lcm
+
+          						)
+          						(?=(\\s|\\()) # followed by space or (
+
+        '''
+        name: "support.function.general.pureli"
+      }
+    ]
+  quote:
+    comment: '''
+
+      				We need to be able to quote any kind of item, which creates
+      				a tiny bit of complexity in our grammar.  It is hopefully
+      				not overwhelming complexity.
+
+      				Note: the first two matches are special cases.  quoted
+      				symbols, and quoted empty lists are considered constant.other
+
+
+    '''
+    patterns: [
+      {
+        captures:
+          "1":
+            name: "punctuation.section.quoted.symbol.pureli"
+        match: '''
+          (?x)
+          						(')\s*
+          						([[:alnum:]][[:alnum:]!$%&*+-./:<=>?@^_~]*)
+
+        '''
+        name: "constant.other.symbol.pureli"
+      }
+      {
+        captures:
+          "1":
+            name: "punctuation.section.quoted.empty-list.pureli"
+          "2":
+            name: "meta.expression.pureli"
+          "3":
+            name: "punctuation.section.expression.begin.pureli"
+          "4":
+            name: "punctuation.section.expression.end.pureli"
+        match: '''
+          (?x)
+          						(')\s*
+          						((\()\s*(\)))
+
+        '''
+        name: "constant.other.empty-list.schem"
+      }
+      {
+        begin: "(')\\s*"
+        beginCaptures:
+          "1":
+            name: "punctuation.section.quoted.pureli"
+        comment: "quoted double-quoted string or s-expression"
+        end: "(?=[\\s()])|(?<=\\n)"
+        name: "string.other.quoted-object.pureli"
+        patterns: [
+          {
+            include: "#quoted"
+          }
+        ]
+      }
+    ]
+  "quote-sexp":
+    begin: "(?<=\\()\\s*(quote)\\b\\s*"
+    beginCaptures:
+      "1":
+        name: "keyword.control.quote.pureli"
+    comment: '''
+
+      				Something quoted with (quote «thing»).  In this case «thing»
+      				will not be evaluated, so we are considering it a string.
+
+    '''
+    contentName: "string.other.quote.pureli"
+    end: "(?=[\\s)])|(?<=\\n)"
+    patterns: [
+      {
+        include: "#quoted"
+      }
+    ]
+  quoted:
+    patterns: [
+      {
+        include: "#string"
+      }
+      {
+        begin: "(\\()"
+        beginCaptures:
+          "1":
+            name: "punctuation.section.expression.begin.pureli"
+        end: "(\\))"
+        endCaptures:
+          "1":
+            name: "punctuation.section.expression.end.pureli"
+        name: "meta.expression.pureli"
+        patterns: [
+          {
+            include: "#quoted"
+          }
+        ]
+      }
+      {
+        include: "#quote"
+      }
+      {
+        include: "#illegal"
+      }
+    ]
+  sexp:
+    begin: "(\\()"
+    beginCaptures:
+      "1":
+        name: "punctuation.section.expression.begin.pureli"
+    end: "(\\))(\\n)?"
+    endCaptures:
+      "1":
+        name: "punctuation.section.expression.end.pureli"
+      "2":
+        name: "meta.after-expression.pureli"
+    name: "meta.expression.pureli"
+    patterns: [
+      {
+        include: "#comment"
+      }
+      {
+        begin: '''
+          (?x)
+          						(?<=\\()       # preceded by (
+          						(define)\\s+   # define
+          						(\\()          # list of parameters
+          						  ([[:alnum:]][[:alnum:]!$%&*+-./:<=>?@^_~]*)
+          						  ((\\s+
+          						    ([[:alnum:]][[:alnum:]!$%&*+-./:<=>?@^_~]*|[._])
+          						   )*
+          						  )\\s*
+          						(\\))
+
+        '''
+        captures:
+          "1":
+            name: "keyword.control.pureli"
+          "2":
+            name: "punctuation.definition.function.pureli"
+          "3":
+            name: "entity.name.function.pureli"
+          "4":
+            name: "variable.parameter.function.pureli"
+          "7":
+            name: "punctuation.definition.function.pureli"
+        end: "(?=\\))"
+        name: "meta.declaration.procedure.pureli"
+        patterns: [
+          {
+            include: "#comment"
+          }
+          {
+            include: "#sexp"
+          }
+          {
+            include: "#illegal"
+          }
+        ]
+      }
+      {
+        begin: '''
+          (?x)
+          						(?<=\\() # preceded by (
+          						(lambda)\\s+
+          						(\\() # opening paren
+          						((?:
+          						  ([[:alnum:]][[:alnum:]!$%&*+-./:<=>?@^_~]*|[._])
+          						  \\s+
+          						)*(?:
+          						  ([[:alnum:]][[:alnum:]!$%&*+-./:<=>?@^_~]*|[._])
+          						)?)
+          						(\\)) # closing paren
+
+        '''
+        captures:
+          "1":
+            name: "keyword.control.pureli"
+          "2":
+            name: "punctuation.definition.variable.pureli"
+          "3":
+            name: "variable.parameter.pureli"
+          "6":
+            name: "punctuation.definition.variable.pureli"
+        comment: '''
+
+          						Not sure this one is quite correct.  That \s* is
+          						particularly troubling
+
+        '''
+        end: "(?=\\))"
+        name: "meta.declaration.procedure.pureli"
+        patterns: [
+          {
+            include: "#comment"
+          }
+          {
+            include: "#sexp"
+          }
+          {
+            include: "#illegal"
+          }
+        ]
+      }
+      {
+        begin: "(?<=\\()(define)\\s([[:alnum:]][[:alnum:]!$%&*+-./:<=>?@^_~]*)\\s*.*?"
+        captures:
+          "1":
+            name: "keyword.control.pureli"
+          "2":
+            name: "variable.other.pureli"
+        end: "(?=\\))"
+        name: "meta.declaration.variable.pureli"
+        patterns: [
+          {
+            include: "#comment"
+          }
+          {
+            include: "#sexp"
+          }
+          {
+            include: "#illegal"
+          }
+        ]
+      }
+      {
+        include: "#quote-sexp"
+      }
+      {
+        include: "#quote"
+      }
+      {
+        include: "#language-functions"
+      }
+      {
+        include: "#string"
+      }
+      {
+        include: "#constants"
+      }
+      {
+        match: "(?<=[\\(\\s])(#\\\\)(space|newline|tab)(?=[\\s\\)])"
+        name: "constant.character.named.pureli"
+      }
+      {
+        match: "(?<=[\\(\\s])(#\\\\)x[0-9A-F]{2,4}(?=[\\s\\)])"
+        name: "constant.character.hex-literal.pureli"
+      }
+      {
+        match: "(?<=[\\(\\s])(#\\\\).(?=[\\s\\)])"
+        name: "constant.character.escape.pureli"
+      }
+      {
+        comment: '''
+
+          						the . in (a . b) which conses together two elements
+          						a and b. (a b c) == (a . (b . (c . nil)))
+
+        '''
+        match: "(?<=[ ()])\\.(?=[ ()])"
+        name: "punctuation.separator.cons.pureli"
+      }
+      {
+        include: "#sexp"
+      }
+      {
+        include: "#illegal"
+      }
+    ]
+  string:
+    begin: "(\")"
+    beginCaptures:
+      "1":
+        name: "punctuation.definition.string.begin.pureli"
+    end: "(\")"
+    endCaptures:
+      "1":
+        name: "punctuation.definition.string.end.pureli"
+    name: "string.quoted.double.pureli"
+    patterns: [
+      {
+        match: "\\\\."
+        name: "constant.character.escape.pureli"
+      }
+    ]
