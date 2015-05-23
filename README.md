@@ -19,7 +19,7 @@ Built-in Procedures
 - Arithmetic operations (`+`, `-`, `*`, `/`)
 - Tests (`zero?`, `empty?`, `nil?`, `number?`, `integer?`, `real?`, `list?`. `string?`, `procedure?`)
 - Comparison (`==`, `<>`, `>`, `<`, `>=`, `<=`)
-- List operations (`list`, `car`, `cdr`, `++`, `slice`)
+- List operations (`list`, `car`, `cdr`, `++`, `slice`, `length`)
 - `show` expression
 - `if` expression
 - `let` and `letrec`
@@ -31,6 +31,7 @@ Built-in IO Actions
 -------------------
 
 - `do!` sequence IO actions
+- `let!` binds an IO result to a variable
 - `read!` reads a line from the standard input
 - `read-file!` reads a file
 - `print!` writes a line to the standard output
@@ -135,7 +136,7 @@ Examples
 ```rkt
 (module main)
 
-(require "std.rkt" std)
+(require "std.pli" std)
 
 (define main
   (do!
@@ -148,7 +149,7 @@ Examples
 ```rkt
 (module main)
 
-(require "std.rkt" std (elem) my-std)
+(require "std.pli" std (elem) my-std)
 
 (define main
   (do!
