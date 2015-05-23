@@ -1,13 +1,17 @@
+Done
+----
+
+- ~~ **IO: read/write from/to files** ~~
+- ~~~ **Parallelism** ~~
+- ~~Syntax highlight~~ for Atom: copy `language-pureli` directory to `~/.atom/packages/`
+
 TODO
 ----
 
+- **Standard library**
+- **Runtime of parallel execuation data processing**
 - Test Test Test
 - Handle duplications of arguments and definitions
-- ~~IO: read/write from/to files (!)~~
-- ~~~Parallelism (!)~~
-- Standard library (!)
-- ~~Syntax highlight~~ for Atom: copy `language-pureli` directory to `~/.atom/packages/`
-- Runtime of parallel execuation data processing (!)
 - Abstract away +RTS and such
 - REPL with definitions and environment (?)
 - Online REPL (?)
