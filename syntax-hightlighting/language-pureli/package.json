@@ -6,6 +6,7 @@
   "engines": {
     "atom": ">0.50.0"
   },
+  "readmeFilename": "README.md",
   "dependencies": {},
   "_id": "language-pureli@0.1.0"
 }
