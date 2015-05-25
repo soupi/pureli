@@ -3,7 +3,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 
-module Pureli.Eval (initEvalState, eval, evalModule) where
+module Pureli.Eval (initEvalState, addToEnv, addImport, replModule, evalExpr, evalModule) where
 
 import Control.Exception (IOException, catch)
 import Data.List (find)
@@ -66,6 +66,13 @@ lookupInModule name modul =
 updateEnv ::  (Env -> Env) -> EvalState m -> EvalState m
 updateEnv f   state = state { getModule = (getModule state) { getModEnv = (f (getModEnv (getModule state))) } }
 
+
+addToEnv :: (Name, WithMD Expr) -> Module -> Module
+addToEnv (name, expr) modul = modul { getModEnv = M.insert name expr (getModEnv modul) }
+
+addImport :: Module -> Module -> Module
+addImport imprt modul = modul { getModImports = imprt : getModImports modul }
+
 -- |change the environment
 changeEnv ::  Env -> EvalState m -> EvalState m
 changeEnv env state = state { getModule = (getModule state) { getModEnv = env } }
@@ -81,6 +88,9 @@ changeBuiltins builtins state = state { getBuiltins = builtins }
 -- |an initial environment state
 initEvalState :: EvalState IO
 initEvalState = EvalState (Module "" "REPL" [] emptyEnv emptyEnv emptyEnv emptyEnv) builtinsIO
+
+replModule :: Module
+replModule =  Module "" "REPL" [] emptyEnv emptyEnv emptyEnv emptyEnv
 
 -- |empty Environment
 emptyEnv :: Env
@@ -104,6 +114,9 @@ pureEval modul exprWithMD@(WithMD md expr) = do
       QUOTE l     -> return $ WithMD md $ QUOTE l
       LIST ls     -> evalOp exprWithMD ls
 
+
+evalExpr :: Module -> WithMD Expr -> IO (Either Error (WithMD Expr))
+evalExpr modul expr = MT.runExceptT $ MT.runReaderT (eval expr) $ EvalState modul builtinsIO
 
 -- |evaluate an expression
 eval :: Monad m => WithMD Expr -> Evaluation m Expr

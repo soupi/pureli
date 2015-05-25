@@ -6,9 +6,22 @@ module Pureli.Utils where
 import Data.List (group, sort)
 import qualified Control.Monad.Trans.Except as MT
 import qualified Control.Monad.Trans.Class  as MT
+import System.Info (os)
+import qualified System.FilePath.Posix   as P (takeDirectory, takeFileName)
+import qualified System.FilePath.Windows as W (takeDirectory, takeFileName)
 
 import Pureli.AST
 import Pureli.Printer()
+
+-- |
+-- get relative system functions (windows or posix)
+systemFuncs :: (FilePath -> FilePath, FilePath -> FilePath)
+systemFuncs =
+  if os == "mingw32"
+  then (W.takeDirectory,W.takeFileName)
+  else (P.takeDirectory,P.takeFileName)
+
+
 
 -- |
 -- Error might contain the problematic expression with it's metadata and an error message.

@@ -3,7 +3,7 @@
 
 -- |
 -- Create a module before evaluation
-module Pureli.Module where
+module Pureli.Module (loadModule, requireToMod) where
 
 import Data.Maybe  (fromMaybe)
 import Data.Either (partitionEithers)
@@ -74,6 +74,12 @@ lookupModule mFile mName (WithMD _ m:ms) =
   if   mFile == modFile m && mName == modName m
   then return m
   else lookupModule mFile mName ms
+
+
+
+-- |converts a require to a module
+requireToMod :: Require -> IO (Either Error Module)
+requireToMod req = flip MT.evalStateT (M.fromList []) $ MT.runExceptT $ requireToModule req
 
 
 -- |converts a require to a module

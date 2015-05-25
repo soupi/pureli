@@ -15,6 +15,9 @@ import GHC.Generics                (Generic)
 -- definitions
 ------------------
 
+-- | a possible repl expression
+data ReqDefExp = Req Require | Def (Name, WithMD Expr) | Exp (WithMD Expr)
+
 
 data ModuleDef = ModuleDef { modFile       :: IO.FilePath
                            , modName       :: Name

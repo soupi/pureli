@@ -1,6 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 
-module Pureli.Parser (parseExpr, parseFile) where
+module Pureli.Parser (parseExpr, parseFile, parseReqDefExp) where
 
 import Control.Applicative (pure, (<$>))
 
@@ -213,3 +213,10 @@ parseFile :: String -> String -> Either String [WithMD ModuleDef]
 parseFile name input = case P.parse (P.many comments >> modules) name input of
   Left err -> Left (show err)
   Right val -> Right val
+
+parseReqDefExp :: String -> String -> Either String ReqDefExp
+parseReqDefExp name input =
+  case P.parse ((Req <$> require) <|> (Def <$> define) <|> (Exp <$> withMD expr)) name input of
+    Left  err -> Left (show err)
+    Right val -> Right val
+
