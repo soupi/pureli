@@ -30,7 +30,7 @@ data Error = Error (Maybe (WithMD Expr)) String
 -- |
 -- How to print errors.
 instance Show Error where
-  show (Error Nothing str) = "Error: " ++ str
+  show (Error Nothing str) = "*** Error: " ++ str
   show (Error (Just (WithMD md expr)) str) = "*** Error: " ++ show md ++ ": " ++ str ++ "\n*** In expression: " ++ show expr
 
 -- |
@@ -62,11 +62,11 @@ sub xs = foldl1 (-) xs
 
 -- |
 -- divide on term from the next in a row. fails on divide by zero.
-divide :: Monad m => (Eq a, Num a) => (a -> a -> a) -> [a] -> MT.ExceptT Error m a
-divide _ []          = return 1
-divide _ [x]         = return x
-divide _ (_:0:_)     = MT.throwE $ Error Nothing "cannot divide by zero"
-divide op (x:y:rest) = divide op $ op x y : rest
+divide :: Monad m => (Eq a, Num a) => WithMD Expr -> (a -> a -> a) -> [a] -> MT.ExceptT Error m a
+divide _ _ []                 = return 1
+divide _ _ [x]                = return x
+divide rootExpr _ (_:0:_)     = MT.throwE $ Error (Just rootExpr) "cannot divide by zero"
+divide rootExpr op (x:y:rest) = divide rootExpr op $ op x y : rest
 
 -- |
 -- returns the duplicates of a list.

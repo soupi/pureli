@@ -726,7 +726,7 @@ evalMul = evalArith (return . product) (return . product)
 
 -- |(/)
 evalDiv :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
-evalDiv = evalArith (divide div) (divide (/))
+evalDiv rootExpr = evalArith (divide rootExpr div) (divide rootExpr (/)) rootExpr
 
 
 -- |evaluate arithmetic expressions. converts integers to floats if an argument is a float.
