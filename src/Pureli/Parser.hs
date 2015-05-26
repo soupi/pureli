@@ -63,8 +63,15 @@ nil = L.reserved "nil" >> pure Nil
 withMD :: P.Parser a -> P.Parser (WithMD a)
 withMD parser =  P.getPosition >>= \pos -> WithMD pos <$> parser
 
+quote :: P.Parser Expr -> P.Parser Expr
+quote e = do
+  WithMD md _ <- withMD $ P.char '\''
+  res <- withMD e
+  return $ LIST [WithMD md (ATOM $ Symbol "quote"), res]
+
 expr :: P.Parser Expr
-expr =  (LIST <$> list)
+expr = quote expr
+    <|> (LIST <$> list)
     <|> (ATOM <$> atom)
 
 list :: P.Parser [WithMD Expr]
