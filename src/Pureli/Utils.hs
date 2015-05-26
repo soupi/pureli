@@ -55,10 +55,26 @@ joinSecondEither f (y,x) = case f x of
 
 
 -- |
--- substitute on term from the next in a row.
+-- sub a list.
 sub :: Num a => [a] -> a
 sub [] = 0
-sub xs = foldl1 (-) xs
+sub (x:xs) = myfold (-) x xs
+
+-- |
+-- sum a list.
+add :: Num a => [a] -> a
+add = myfold (+) 0
+
+-- |
+-- mul a list.
+mul :: Num a => [a] -> a
+mul = myfold (*) 1
+
+-- |
+-- my tail recursive fold
+myfold :: (a -> a -> a) -> a -> [a] -> a
+myfold _ res []     = res
+myfold f res (x:xs) = myfold f (f res x) xs
 
 -- |
 -- divide on term from the next in a row. fails on divide by zero.

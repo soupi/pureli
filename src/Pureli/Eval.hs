@@ -714,7 +714,7 @@ evalEval rootExpr = \case
 
 -- |(+)
 evalPlus :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
-evalPlus = evalArith (return . sum) (return . sum)
+evalPlus = evalArith (return . add) (return . add)
 
 -- |(-)
 evalMinus :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
@@ -722,7 +722,7 @@ evalMinus = evalArith (return . sub) (return . sub)
 
 -- |(*)
 evalMul :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
-evalMul = evalArith (return . product) (return . product)
+evalMul = evalArith (return . mul) (return . mul)
 
 -- |(/)
 evalDiv :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
