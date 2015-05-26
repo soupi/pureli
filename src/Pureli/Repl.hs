@@ -30,7 +30,10 @@ runExpr modul content =
         (evalExpr modul res >>= either print print) >> return modul
       Right (Req res) ->
         requireToMod res >>= either (\err -> print err >> return modul) (return . flip addImport modul)
-      Right (Def res) -> return $ addToEnv res modul
+      Right (Def res) ->
+        evalExpr modul (snd res) >>= \case
+          Left  err  -> print err >> return modul
+          Right expr -> return $ addToEnv (fst res, expr) modul
 
 
 -- |
