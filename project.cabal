@@ -37,6 +37,7 @@ executable pureli
     ,generic-deriving
     ,directory
     ,filepath
+    ,haskeline
 
   hs-source-dirs:      src
   default-language:    Haskell2010

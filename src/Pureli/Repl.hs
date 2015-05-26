@@ -5,7 +5,8 @@
 -- repl module
 module Pureli.Repl (runRepl) where
 
-import System.IO (hFlush, stdout)
+import qualified System.Console.Haskeline as HL
+import Control.Monad.Trans.Class (lift)
 
 --import Pureli.Utils
 import Pureli.AST
@@ -16,50 +17,52 @@ import Pureli.Eval
 -- |
 -- interprets a file or runs the REPL depending on the number of arguments
 runRepl :: IO ()
-runRepl =
-  putStrLn welcomeMsg >> repl replModule >> putStrLn (unlines ["","Goodbye."]) -- |^run repl
+runRepl = do
+  putStrLn welcomeMsg
+  HL.runInputT HL.defaultSettings (repl replModule) -- |^run repl
+  putStrLn (unlines ["","Goodbye."])
 
 -- |
 -- tries to parse the expression and interpret it.
-runExpr :: Module -> String -> IO Module
+runExpr :: Module -> String -> HL.InputT IO Module
 runExpr modul ""      = return modul
 runExpr modul content =
     case parseReqDefExp "REPL" content of
-      Left  err -> putStrLn err >> return modul
+      Left  err -> HL.outputStrLn err >> return modul
       Right (Exp res) ->
-        (evalExpr modul res >>= either print print) >> return modul
+        lift $ (evalExpr modul res >>= either print print) >> return modul
       Right (Req res) ->
-        requireToMod res >>= either (\err -> print err >> return modul) (return . flip addImport modul)
+        lift (requireToMod res) >>= either (\err -> HL.outputStrLn (show err) >> return modul) (return . flip addImport modul)
       Right (Def res) ->
-        evalExpr modul (snd res) >>= \case
-          Left  err  -> print err >> return modul
+        lift (evalExpr modul (snd res)) >>= \case
+          Left  err  -> HL.outputStrLn (show err) >> return modul
           Right expr -> return $ addToEnv (fst res, expr) modul
 
 
 -- |
 -- a REPL for expressions.
-repl :: Module -> IO ()
+repl :: Module -> HL.InputT IO ()
 repl modul = do
-  putStr "> "
-  hFlush stdout
-  expr <- getLine
-  case expr of
-    ":reset" -> repl replModule
-    ":start" -> repl =<< runExpr modul =<< multiLineExpr
-    ":help"  -> putStrLn helpMsg >> repl modul
-    ":q"     -> return ()
-    _        -> repl =<< runExpr modul expr
+  minput <- HL.getInputLine "> "
+  case minput of
+    Just ":reset" -> repl replModule
+    Just ":start" -> repl =<< runExpr modul =<< multiLineExpr
+    Just ":help"  -> HL.outputStrLn helpMsg >> repl modul
+    Just ":q"     -> return ()
+    Just expr     -> repl =<< runExpr modul expr
+    Nothing       -> return ()
 
 
 -- |
 -- read a multiple line expression until option ':end' or ':trash'
-multiLineExpr :: IO String
+multiLineExpr :: HL.InputT IO String
 multiLineExpr = go []
   where go exps =
-          getLine >>= \case
-            ":end"   -> return $ concat $ reverse exps
-            ":trash" -> return []
-            expr     -> go (expr:exps)
+          HL.getInputLine "" >>= \case
+            Nothing       -> go exps
+            Just ":end"   -> return $ concat $ reverse exps
+            Just ":trash" -> return []
+            Just expr     -> go (expr:exps)
 
 
 -- |
