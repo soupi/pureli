@@ -15,8 +15,6 @@ import Pureli.Utils
 import Pureli.AST
 import Pureli.Printer()
 
-import Debug.Trace
-
 
 -- |evaluation type
 type Preprocess a = MT.ReaderT Env (MT.ExceptT Error MT.Identity) (WithMD a)
@@ -159,8 +157,6 @@ preprocessMacro macro rootExpr operands =
             let firstZip  = zip (init renamedNames) preprocessedArgs
             let secondZip = (';':rarg, WithMD md $ LIST (drop (length (init renamedNames)) preprocessedArgs))
             extendedEnv <- return . M.union (M.fromList (firstZip ++ [secondZip])) =<< ask
-            traceM "---------------"
-            traceShowM extendedEnv
             -- |preprocess renamed macro body and replace argument names with argument expressions in it.
             MT.withReaderT (const extendedEnv) (preprocess afterRename)
     _ -> return rootExpr

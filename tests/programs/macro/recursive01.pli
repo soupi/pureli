@@ -12,6 +12,6 @@
     [print! x]))
 
 (define x
-  (cond (list #f 1)
-        (list #f 2)
-        (list #t 3)))
+  (cond '(#f (error "error"))
+        '(#f 2)
+        '(#t 3)))
