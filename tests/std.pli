@@ -1,0 +1,95 @@
+;; standard library
+
+(module std)
+
+(define id (x) x)
+
+(define compose (f g)
+  (lambda (x) (f (g x))))
+
+
+(defmacro bind!
+  ((m f)
+    (do!
+      [let! x m]
+      [f x])))
+
+(defmacro cond
+   [() (error "*** error: cond - non-exhuastive patterns")]
+   [(clause1 &rest)
+     (if (eval (car clause1))
+         (eval (car (cdr clause1)))
+         (cond &rest))])
+
+
+;; ----------
+;; list functions
+(module list)
+
+(require bool)
+
+(define elem [x xs]
+  (if (list? xs)
+    (if (empty? xs) #f
+      (if (= (car xs) x) #t
+        (elem x (cdr xs))))
+    (error "not a list")))
+
+(define cons [x xs]
+  (if (list? xs)
+    (++ (list x) xs)
+    (++ (list x) (list xs))))
+
+(define map [f xs]
+  (if (bool/not (list? xs))
+    (error "cannot map on a non list type")
+    (if (empty? xs)
+      xs
+      (cons (f (car xs)) (map f (cdr xs))))))
+
+;; ----------
+;; bool functions
+(module bool)
+
+(define not [test]
+  (if test #f #t))
+
+;; ----------
+;; tests
+(module main)
+
+(require std)
+(require list)
+(require bool)
+
+(define main
+  (do!
+    [test-elem!]
+    [test-cons!]
+    [test-map!]
+    [test-bind!]))
+
+(define test-elem! ()
+  (do!
+    [print! "list/elem test. expected results: #t"]
+    [print! (list/elem 3 (list 1 2 3))]
+    [print! (try (list/elem 3 3) #t)]
+    [print! (bool/not (list/elem 4 (list 1 2 3)))]))
+
+(define test-cons! ()
+  (do!
+    [print! "list/cons test. expected results: (1 2)"]
+    [print! (list/cons 1 2)]
+    [print! (list/cons 1 (list 2))]
+    [print! (list/cons 1 (cdr (list/cons 1 2)))]))
+
+(define test-map! ()
+  (do!
+    [print! (list/map show (list))]
+    [print! (list/map show (list 1 2 3))]
+    [print! (list/map std/id (list 1 2 3))]
+    [print! (list/map (lambda (x) (+ 1 x)) (list 1 2 3))]))
+
+(define test-bind! ()
+  (do!
+    [std/bind! (pure #t) print!]))

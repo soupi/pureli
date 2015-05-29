@@ -10,6 +10,7 @@ import qualified Control.Monad.Trans.Reader as MT
 import qualified Control.Monad.Trans.Except as MT
 import qualified Data.Functor.Identity as MT
 import qualified Data.Map as M
+import qualified Data.Foldable as F (concatMap)
 
 import Pureli.Utils
 import Pureli.AST
@@ -22,8 +23,9 @@ type Preprocess a = MT.ReaderT Env (MT.ExceptT Error MT.Identity) (WithMD a)
 -- |preprocess a module.
 preprocessModule :: Module -> MT.ExceptT Error MT.Identity Module
 preprocessModule modul = do
-  let env = getModMacros modul
-  let macros = M.toList env
+  let env    = getModMacros modul
+      menv   = F.concatMap (\m -> fmap (\(n,e) -> (getModName m ++ "/" ++ n, e)) (M.toList $ getModExportedMacros m)) (getModImports modul)
+  let macros = M.toList env ++ menv
   definitions <- mapM (mapM (\expr -> MT.runReaderT (preprocess expr) (M.fromList macros))) $ M.toList (getModEnv modul)
   return $ modul { getModEnv = M.fromList definitions, getModMacros = M.fromList macros }
 

@@ -4,6 +4,7 @@
 
 module Pureli.Eval (initEvalState, addToEnv, addImport, replModule, evalExpr, evalModule) where
 
+import Control.Applicative ((<$>))
 import Control.Exception (IOException, catch)
 import Data.List (find)
 import Control.Monad.Trans.Class  (lift)
@@ -268,7 +269,7 @@ evalOpSymbol exprWithMD operands name = do
     Nothing -> case M.lookup name env of
       Just v  -> eval v >>= \result -> evalOp exprWithMD (result : operands)
       Nothing -> case lookupInModule name modul of
-        Nothing -> throwErr (Just exprWithMD) $ " Could not find " ++ show name ++ " in environment: " ++ show env
+        Nothing -> throwErr (Just exprWithMD) $ " Could not find " ++ show name ++ " in environment: " ++ show (fst <$> M.toList env)
         Just (v, vMod) -> do
           result <- MT.withReaderT (changeModule vMod) (eval v)
           MT.withReaderT (changeModule modul) $ evalOp exprWithMD (result : operands)
@@ -425,13 +426,13 @@ evalPrintFile rootExpr [file@(WithMD md _), expr] = do
   eFile   <- eval file
   evalled <- eval expr
   case (eFile, evalled) of
-    ((WithMD _ (ATOM (String wfile))), (WithMD _ (ATOM (String str)))) -> lift $ lift $ writeFile wfile str
-    ((WithMD _ (ATOM (String wfile))), _) -> do
+    (WithMD _ (ATOM (String wfile)), WithMD _ (ATOM (String str))) -> lift $ lift $ writeFile wfile str
+    (WithMD _ (ATOM (String wfile)), _) -> do
       result <- lift $ lift ((writeFile wfile (show evalled) >> return Nothing) `catch` (\e -> return $ Just $ show (e :: IOException)))
       case result of
         Nothing -> return ()
         Just er -> throwErr (Just rootExpr) er
-    _ -> throwErr (Just eFile) $ "unexpected filepath"
+    _ -> throwErr (Just eFile) "unexpected filepath"
   returnIO $ WithMD md $ ATOM Nil
 evalPrintFile expr xs = throwErr (Just expr) $ "bad arity, expected 2 argument, got: " ++ show (length xs)
 
@@ -441,11 +442,11 @@ evalReadFile expr@(WithMD md _) [file] = do
   eFile <- eval file
   input <- case eFile of
     (WithMD _ (ATOM (String rfile))) -> do
-      result <- lift $ lift ((readFile rfile >>= return . Right) `catch` (\e -> return $ Left $ show (e :: IOException)))
+      result <- lift $ lift ((Right <$> readFile rfile) `catch` (\e -> return $ Left $ show (e :: IOException)))
       case result of
         Right x -> return x
         Left er -> throwErr (Just expr) er
-    _                                -> throwErr (Just eFile) $ "unexpected filepath"
+    _                                -> throwErr (Just eFile) "unexpected filepath"
   returnIO $ WithMD md $ ATOM $ String input
 evalReadFile expr xs = throwErr (Just expr) $ "bad arity, expected 1 arguments, got: " ++ show (length xs)
 
@@ -458,8 +459,7 @@ evalReadFile expr xs = throwErr (Just expr) $ "bad arity, expected 1 arguments, 
 -- |evaluate a 'show' expression. converts an expression to string.
 evalShow :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
 evalShow rootExpr@(WithMD md _) = \case
-  [expr] -> do
-    eval expr >>= lift . return . WithMD md . ATOM . String . show
+  [expr] -> eval expr >>= lift . return . WithMD md . ATOM . String . show
   xs -> throwErr (Just rootExpr) $ "bad arity: expects 1 argument, got " ++ show (length xs)
 
 -- |evaluate a 'trace' expression.

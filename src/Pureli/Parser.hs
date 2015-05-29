@@ -4,6 +4,7 @@ module Pureli.Parser (parseExpr, parseFile, parseReqDefExp) where
 
 import Control.Applicative (pure, (<$>))
 
+import Data.Maybe  (fromMaybe)
 import Data.Either (partitionEithers)
 import Text.ParserCombinators.Parsec ((<|>))
 import qualified Text.Parsec as P
@@ -181,8 +182,9 @@ requires = P.many require
 
 require :: P.Parser Require
 require =  do
+  fName <- fmap P.sourceName P.getPosition
   L.reserved "(require"
-  String modFilePath <- string
+  String modFilePath <- fromMaybe (String fName) <$> P.optionMaybe string
   P.spaces
   moduleName <- L.identifier
   P.spaces

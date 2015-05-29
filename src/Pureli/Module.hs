@@ -8,6 +8,7 @@ module Pureli.Module (loadModule, requireToMod) where
 import Data.Maybe  (fromMaybe)
 import Data.Either (partitionEithers)
 import Control.Applicative ((<$>))
+import Control.Exception (IOException, catch)
 import qualified Control.Monad.Trans.Class as MT
 import qualified Control.Monad.Trans.Except as MT
 import qualified Control.Monad.Trans.State.Strict as MT
@@ -24,12 +25,14 @@ import Pureli.Preprocess
 -- read module definitions from file
 readModules :: (MT.MonadTrans t, Monad (t IO)) =>FilePath -> MT.ExceptT Error (t IO) [WithMD ModuleDef]
 readModules filepath = do
-  fileContent <- MT.lift (MT.lift (readFile filepath))
-                 `MT.catchE`
-                 \_ -> MT.throwE (Error Nothing $ "Couldn't find file " ++ filepath)
-  case parseFile filepath fileContent of
-    Left err  -> MT.throwE (Error Nothing err)
-    Right res -> return res
+  result <- MT.lift $ MT.lift ((Right <$> readFile filepath) `catch` (\e -> return $ Left $ show (e :: IOException)))
+  case result of
+    Left _ ->
+      MT.throwE (Error Nothing $ "Couldn't find file " ++ filepath)
+    Right fileContent ->
+      case parseFile filepath fileContent of
+        Left err  -> MT.throwE (Error Nothing err)
+        Right res -> return res
 
 -------------------------------------------------------------
 
@@ -45,27 +48,23 @@ loadModule filepath mName = do
 -- |
 -- converts a list of requires to a list of modules
 requiresToModules :: [Require] -> MT.ExceptT Error (MT.StateT (M.Map (Name, Name) Module) IO) [Module]
-requiresToModules requires =
-  mapM cacheRequire requires
+requiresToModules = mapM cacheRequire
 
 cacheRequire :: Require -> MT.ExceptT Error (MT.StateT (M.Map (Name, Name) Module) IO) Module
-cacheRequire modul@(Require mFile mName newName exposedDefs) = do
+cacheRequire modul@(Require mFile mName newName exposedDefs) =
   MT.lift MT.get >>= \mapping -> case M.lookup (mFile, mName) mapping of
-    Just m  -> do
+    Just m  ->
       if getModName m == ";cycle"
         then
           MT.throwE $ Error Nothing $ "cyclic require on module " ++ mName
         else do
-          let wantedDefs = case (\x -> (x == [], x)) `fmap` exposedDefs of
-                  Just (False, exposedDefs) -> M.fromList $ filter (\x -> fst x `elem` exposedDefs) (M.toList (getModEnv m))
+          let wantedDefs = case (\x -> (null x, x)) `fmap` exposedDefs of
+                  Just (False, exDefs) -> M.fromList $ filter (\x -> fst x `elem` exDefs) (M.toList (getModEnv m))
                   _                         -> getModEnv m
-          let modResult = m { getModExports = wantedDefs, getModName = (fromMaybe mName newName) }
+          let modResult = m { getModExports = wantedDefs, getModName = fromMaybe mName newName }
           MT.lift $ MT.modify (M.insert (mFile, mName) (m { getModName = mName }))
           return modResult
-    Nothing -> do
-      modResult <- requireToModule modul
-      -- test test test
-      return $ modResult
+    Nothing -> requireToModule modul
 
 
 lookupModule :: Name -> Name -> [WithMD ModuleDef] -> Either String ModuleDef
@@ -90,8 +89,8 @@ requireToModule (Require filePath mName newName exposing) = do
   let wantedDefs = case exposing of
         Nothing          -> env
         Just definitions ->  M.fromList $ filter (\x -> fst x `elem` definitions) (M.toList env)
-  let modResult = modul { getModName = (fromMaybe mName newName), getModExports = wantedDefs }
-  return $ modResult
+  let result = modul { getModName = fromMaybe mName newName, getModExports = wantedDefs }
+  return result
 
 
 getModuleFromFile :: FilePath -> Name -> MT.ExceptT Error (MT.StateT (M.Map (FilePath, Name) Module) IO) Module
@@ -125,7 +124,7 @@ fromDefToModule reqs def = do
       Just exposes -> partitionEithers <$> which (modDefs def) (modMacros def) exposes
   exportedDefs   <- filterListMap (map fst exposedDefs) (modDefs def)
   exportedMacros <- filterListMap (map fst exposedMacros) (modMacros def)
-  return $
+  return
     Module { getModFile = modFile def
            , getModName = modName def
            , getModImports = reqs
@@ -144,8 +143,8 @@ filterListMap (a:as) list = case lookup a list of
 
 
 which :: Eq a => [(a,b)] -> [(a,b)] -> [a] -> Either a [Either (a,b) (a,b)]
-which list1 list2 xs = mapM f xs
-  where f x = case maybeToEither x (lookup x list1 >>= return . Left . (,) x) of
+which list1 list2 = mapM f
+  where f x = case maybeToEither x (Left . (,) x <$> lookup x list1) of
                 Right r -> Right r
                 Left  _ -> maybeToEither x (lookup x list2 >>= Just . Right . (,) x)
 
@@ -154,8 +153,8 @@ which list1 list2 xs = mapM f xs
 envIfNoDups :: Monad m => Name -> Env -> MT.ExceptT Error m Env
 envIfNoDups mName env = do
   let dups = duplicates $ map fst (M.toList env)
-  if length dups > 0
+  if not (null dups)
   then MT.throwE $ Error Nothing $ "Duplicate definitions in module: " ++ mName ++ "\n*** " ++ show dups
-  else return $ env
+  else return env
 
 
