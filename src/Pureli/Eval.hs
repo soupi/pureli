@@ -707,7 +707,7 @@ evalEval :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
 evalEval rootExpr = \case
   [element] -> eval element >>= \case
     WithMD _ (QUOTE expr) -> eval expr
-    WithMD _  _           -> throwErr (Just rootExpr) "bad type to eval - operand is not a quote"
+    expr                  -> eval expr >>= eval
   xs        ->throwErr (Just rootExpr) $ "bad arity, expected 1 argument, got: " ++ show (length xs)
 
 

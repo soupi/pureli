@@ -3,8 +3,8 @@
 (defmacro cond
   [() (error "*** error: cond - non-exhuastive patterns")]
   [(clause1 &rest)
-     (if (car clause1)
-         (car (cdr clause1))
+     (if (eval (car clause1))
+         (eval (car (cdr clause1)))
          (cond &rest))])
 
 (define main
@@ -13,5 +13,5 @@
 
 (define x
   (cond '(#f (error "error"))
-        '(#f 2)
+        '((= 1 2) 2)
         '(#t 3)))
