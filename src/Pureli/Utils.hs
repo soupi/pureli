@@ -21,8 +21,6 @@ systemFuncs =
   then (W.takeDirectory,W.takeFileName)
   else (P.takeDirectory,P.takeFileName)
 
-
-
 -- |
 -- Error might contain the problematic expression with it's metadata and an error message.
 data Error = Error (Maybe (WithMD Expr)) String
@@ -83,6 +81,8 @@ divide _ _ []                 = return 1
 divide _ _ [x]                = return x
 divide rootExpr _ (_:0:_)     = MT.throwE $ Error (Just rootExpr) "cannot divide by zero"
 divide rootExpr op (x:y:rest) = divide rootExpr op $ op x y : rest
+
+
 
 -- |
 -- returns the duplicates of a list.

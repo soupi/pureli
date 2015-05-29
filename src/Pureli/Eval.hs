@@ -1,6 +1,5 @@
 
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 
 module Pureli.Eval (initEvalState, addToEnv, addImport, replModule, evalExpr, evalModule) where
@@ -301,6 +300,7 @@ pureBuiltins =
     ,("-", evalMinus)
     ,("*", evalMul)
     ,("/", evalDiv)
+    ,("mod", evalMod)
     ,("if", evalIf)
     ,("++", evalAppend)
     ,("zero?",      evalIs isZeroTest)
@@ -728,24 +728,29 @@ evalMul = evalArith (return . mul) (return . mul)
 evalDiv :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
 evalDiv rootExpr = evalArith (divide rootExpr div) (divide rootExpr (/)) rootExpr
 
+-- |(mod)
+evalMod :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
+evalMod rootExpr = evalArith (divide rootExpr mod) (const (MT.throwE $ Error (Just rootExpr) "cannot get modulo of real number")) rootExpr
+
+
 
 -- |evaluate arithmetic expressions. converts integers to floats if an argument is a float.
 evalArith :: Monad m => ([Integer] -> MT.ExceptT Error m Integer) -> ([Double] -> MT.ExceptT Error m Double) -> WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
 evalArith intOp realOp rootExpr@(WithMD exprMD _) operands = do
-  modul <- return . getModule =<< ask
+  modul   <- return . getModule =<< ask
   results <- liftFromEither $ seqParMap (evalToNumber modul rootExpr) operands
   if length (filter isReal results) > 0
   then
-    lift ((realOp $ (fmap atomToDouble results)) >>= return . WithMD exprMD . ATOM . Real)
+    lift ((realOp $ fmap atomToDouble results) >>= return . WithMD exprMD . ATOM . Real)
   else
-    lift ((intOp $ (fmap atomToInteger results)) >>= return . WithMD exprMD . ATOM . Integer)
+    lift ((intOp $ fmap atomToInteger results) >>= return . WithMD exprMD . ATOM . Integer)
 
 
 -- |evaluate '++' expression for lists and strings.
 evalAppend :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
 evalAppend rootExpr@(WithMD exprMD _) operands =
-  (sequence $ fmap (evalToList rootExpr) operands) >>= \res -> case sequence res of
-    Right results -> lift $ return $ WithMD exprMD $ QUOTE $ WithMD exprMD $ LIST $ foldl (++) [] results
+  mapM (evalToList rootExpr) operands >>= \res -> case sequence res of
+    Right results -> lift $ return $ WithMD exprMD $ QUOTE $ WithMD exprMD $ LIST $ myfold (++) [] results
     Left _ -> do
         result <- mapM (evalToString rootExpr) operands
         case sequence result of

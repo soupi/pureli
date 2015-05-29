@@ -16,7 +16,7 @@ Atomic Expressions
 Built-in Procedures
 -------------------
 
-- Arithmetic operations (`+`, `-`, `*`, `/`)
+- Arithmetic operations (`+`, `-`, `*`, `/`, `mod`)
 - Tests (`zero?`, `empty?`, `nil?`, `number?`, `integer?`, `real?`, `list?`. `string?`, `procedure?`)
 - Comparison (`==`, `<>`, `>`, `<`, `>=`, `<=`)
 - List operations (`list`, `car`, `cdr`, `++`, `slice`, `length`)
