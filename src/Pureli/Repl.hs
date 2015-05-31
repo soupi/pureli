@@ -10,6 +10,7 @@ import Control.Monad.Trans.Class (lift)
 
 --import Pureli.Utils
 import Pureli.AST
+import Pureli.Utils
 import Pureli.Parser
 import Pureli.Module
 import Pureli.Eval
@@ -48,10 +49,11 @@ repl modul = do
     Just ":reset" -> repl replModule
     Just ":start" -> repl =<< runExpr modul =<< multiLineExpr
     Just ":help"  -> HL.outputStrLn helpMsg >> repl modul
+    Just ":env"   -> HL.outputStrLn (unlines $ listMods 0 modul) >> repl modul
     Just ":q"     -> return ()
+    Just c@(':':_)-> HL.outputStrLn ("*** Error: " ++ c ++ " unknown command.") >> repl modul
     Just expr     -> repl =<< runExpr modul expr
     Nothing       -> return ()
-
 
 -- |
 -- read a multiple line expression until option ':end' or ':trash'

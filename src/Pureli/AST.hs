@@ -62,7 +62,7 @@ type Name =  String
 
 -- |
 -- a function with the environment it had when interpreted - for lexical scoping
-data Closure = Closure Env (WithMD Fun) deriving (Eq)
+data Closure = Closure Module (WithMD Fun) deriving (Eq)
 
 -- |
 -- a function is a list of argument names, maybe an additional 'rest' argument and a body

@@ -108,3 +108,10 @@ validArgs (x:xs) = case x of
   ('&':var) -> if null xs then (True, Just var) else (False, Nothing)
   _ -> validArgs xs
 
+
+listMods :: Int -> Module -> [String]
+listMods n modul =
+  let m  = getModName modul
+      ms = fmap ((replicate (n+2) ' ' ++) . getModName) (getModImports modul)
+  in
+    ((replicate n ' ' ++ m) : ms ++ concatMap (listMods n) (getModImports modul))

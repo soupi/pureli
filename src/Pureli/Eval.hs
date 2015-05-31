@@ -139,7 +139,7 @@ evalAtom rootExpr@(WithMD md _) atom = do
       Nothing -> case lookupInModule var modul of
         Just (v, vMod) -> MT.withReaderT  (changeModule vMod) (eval v)
         Nothing -> case M.lookup var builtins of
-          Nothing -> throwErr (Just rootExpr) $ "Could not find " ++ show var ++ " in environment"
+          Nothing -> throwErr (Just rootExpr) $ "Could not find " ++ show var ++ " in environment: " ++ show (fst <$> M.toList env)
           Just _  -> return $ WithMD md $ ATOM $ Symbol var -- |^this will be handled later
     other -> return $ WithMD md (ATOM other)
 
@@ -269,7 +269,7 @@ evalOpSymbol exprWithMD operands name = do
     Nothing -> case M.lookup name env of
       Just v  -> eval v >>= \result -> evalOp exprWithMD (result : operands)
       Nothing -> case lookupInModule name modul of
-        Nothing -> throwErr (Just exprWithMD) $ " Could not find " ++ show name ++ " in environment: " ++ show (fst <$> M.toList env)
+        Nothing -> throwErr (Just exprWithMD) $ " Could not find " ++ show name ++ " in environment: " ++ show (fst <$> M.toList env) ++ unlines ("": listMods 0 modul)
         Just (v, vMod) -> do
           result <- MT.withReaderT (changeModule vMod) (eval v)
           MT.withReaderT (changeModule modul) $ evalOp exprWithMD (result : operands)
