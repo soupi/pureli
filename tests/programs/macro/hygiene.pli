@@ -1,0 +1,12 @@
+(module main)
+
+(define plus +)
+
+(defmacro test
+  ((x y)
+   (plus x y)))
+
+(define main
+  (do!
+    (print! "hygiene test, expected result: 3")
+    (print! (let ((plus trace)) (test 1 2)))))

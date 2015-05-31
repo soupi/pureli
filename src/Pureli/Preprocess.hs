@@ -18,7 +18,18 @@ import Pureli.Printer()
 
 
 -- |evaluation type
-type Preprocess a = MT.ReaderT Env (MT.ExceptT Error MT.Identity) (WithMD a)
+type Preprocess a = MT.ReaderT (Env, Module) (MT.ExceptT Error MT.Identity) (WithMD a)
+
+getEnv :: Monad m => MT.ReaderT (Env, Module) m Env
+getEnv = ask >>= return . fst
+
+getMod :: Monad m => MT.ReaderT (Env, Module) m Module
+getMod = ask >>= return . snd
+
+wrapInClosureCall :: WithMD Expr -> Preprocess Expr
+wrapInClosureCall (WithMD md expr) = do
+  modul <- getMod
+  return $ WithMD md $ LIST [WithMD md $ PROCEDURE $ Closure modul $ WithMD md $ Fun (FunArgs [] Nothing) expr]
 
 -- |preprocess a module.
 preprocessModule :: Module -> MT.ExceptT Error MT.Identity Module
@@ -26,7 +37,7 @@ preprocessModule modul = do
   let env    = getModMacros modul
       menv   = F.concatMap (\m -> fmap (\(n,e) -> (getModName m ++ "/" ++ n, e)) (M.toList $ getModExportedMacros m)) (getModImports modul)
   let macros = M.toList env ++ menv
-  definitions <- mapM (mapM (\expr -> MT.runReaderT (preprocess expr) (M.fromList macros))) $ M.toList (getModEnv modul)
+  definitions <- mapM (mapM (\expr -> MT.runReaderT (preprocess expr) (M.fromList macros, modul))) $ M.toList (getModEnv modul)
   return $ modul { getModEnv = M.fromList definitions, getModMacros = M.fromList macros }
 
 -- |preprocess an expression.
@@ -36,12 +47,12 @@ preprocess exprWithMD@(WithMD md expr) =
     ATOM a  -> preprocessAtom exprWithMD a
     QUOTE l -> return . WithMD md . QUOTE =<< return l
     LIST ls -> preprocessOp exprWithMD ls
-    _       -> throwErr (Just exprWithMD) "something went wrong here."
+    other   -> return $ WithMD md other
 
 -- |preprocess an Atom.
 preprocessAtom :: WithMD Expr -> Atom -> Preprocess Expr
 preprocessAtom (WithMD md _) atom = do
-  env <- ask
+  env <- getEnv
   case atom of
     Symbol var -> case M.lookup var env of
       Just v  -> return v
@@ -65,7 +76,7 @@ preprocessOp exprWithMD@(WithMD md _) (operatorWithMD@(WithMD _ operator):operan
 -- |check if name is in the environment.
 preprocessOpSymbol :: WithMD Expr -> [WithMD Expr] -> Name -> Preprocess Expr
 preprocessOpSymbol exprWithMD@(WithMD md _) operands name = do
-  env <- ask
+  env <- getEnv
   if name == "mquote"
   then return exprWithMD
   else
@@ -86,7 +97,7 @@ preprocessOpSymbol exprWithMD@(WithMD md _) operands name = do
 -- |preprocess macro. tries to fit amount of arguments recursively.
 preprocessMacroRest :: WithMD Expr -> WithMD Expr -> [WithMD Expr] -> Preprocess Expr
 preprocessMacroRest macro rootExpr operands = do
-  env <- ask
+  env <- getEnv
   case operands of
     [WithMD _ (ATOM (Symbol ('&':var)))] ->
       case M.lookup (';':var) env of
@@ -102,6 +113,7 @@ preprocessMacro macro rootExpr operands =
     WithMD md (LIST []) -> throwErr (Just rootExpr) $ "arity problem, defmacro at " ++ show md ++ "does not take " ++ show (length operands) ++ " arguments"
     WithMD md (LIST (WithMD _ (LIST [WithMD smd (ATOM (Symbol args)), body]):_)) ->
       do
+        modul <- getMod
         -- |preprocess arguments
         preprocessedArgs <- mapM preprocess operands
         -- |get argument name
@@ -109,15 +121,16 @@ preprocessMacro macro rootExpr operands =
         -- |get argument renamed with initial ';' as symbols
         argRenamed <- (MT.lift . mapExprToSymbolName (';':)) (WithMD smd (ATOM (Symbol args)))
         -- |extend environment by mapping arguments symbols from name to ;name
-        renamedEnv <- return . M.union (M.fromList [(argName, argRenamed)]) =<< ask
+        renamedEnv <- return . M.union (M.fromList [(argName, argRenamed)]) =<< getEnv
         -- |replace arguments symbols from name to ;name in body of macro
-        afterRename <- MT.withReaderT (const renamedEnv) (preprocess body)
+        afterRename <- MT.withReaderT (const (renamedEnv, modul)) (preprocess body)
         -- |extend environment with real arguments
         let renamedName = (';':) argName
-        extendedEnv <- return . M.union (M.fromList [(renamedName, WithMD md $ QUOTE $ WithMD md $ LIST preprocessedArgs)]) =<< ask
+        extendedEnv <- return . M.union (M.fromList [(renamedName, WithMD md $ QUOTE $ WithMD md $ LIST preprocessedArgs)]) =<< getEnv
         -- |preprocess renamed macro body and replace argument names with argument expressions in it.
-        MT.withReaderT (const extendedEnv) (preprocess afterRename)
+        MT.withReaderT (const (extendedEnv, modul)) (preprocess afterRename) >>= wrapInClosureCall
     WithMD md (LIST (WithMD _ (LIST [WithMD _ (LIST args), body]):rest)) -> do
+      modul <- getMod
       -- |get argument names
       aNames   <- mapM (MT.lift . exprToSymbolName) args
       case hasRest aNames aNames of
@@ -132,18 +145,18 @@ preprocessMacro macro rootExpr operands =
             -- |get arguments renamed with initial ';' as symbols
             argRenamed <- mapM (MT.lift . mapExprToSymbolName (';':)) args
             -- |extend environment by mapping arguments symbols from name to ;name
-            renamedEnv <- return . M.union (M.fromList (zip argNames argRenamed)) =<< ask
+            renamedEnv <- return . M.union (M.fromList (zip argNames argRenamed)) =<< getEnv
             -- |replace arguments symbols from name to ;name in body of macro
-            afterRename <- MT.withReaderT (const renamedEnv) (preprocess body)
+            afterRename <- MT.withReaderT (const (renamedEnv, modul)) (preprocess body)
             -- |extend environment with real arguments
             let renamedNames = map (';':) argNames
-            extendedEnv <- return . M.union (M.fromList (zip renamedNames preprocessedArgs)) =<< ask
+            extendedEnv <- return . M.union (M.fromList (zip renamedNames preprocessedArgs)) =<< getEnv
             -- |preprocess renamed macro body and replace argument names with argument expressions in it.
-            MT.withReaderT (const extendedEnv) (preprocess afterRename)
+            MT.withReaderT (const (extendedEnv, modul)) (preprocess afterRename) >>= wrapInClosureCall
         (argNames, Just rarg) ->
           if length operands +1 < length args
           -- |try next macro
-          then preprocessMacro (WithMD md (LIST rest)) rootExpr operands
+          then preprocessMacro (WithMD md (LIST rest)) rootExpr operands >>= wrapInClosureCall
           -- |this macro fits. preprocess macro,
           else do
             -- |preprocess arguments
@@ -153,14 +166,14 @@ preprocessMacro macro rootExpr operands =
             -- |extend environment by mapping arguments symbols from name to ;name
             let renamedEnv = M.fromList (zip argNames argRenamed)
             -- |replace arguments symbols from name to ;name in body of macro
-            afterRename <- MT.withReaderT (const renamedEnv) (preprocess body)
+            afterRename <- MT.withReaderT (const (renamedEnv, modul)) (preprocess body)
             -- |extend environment with real arguments
             let renamedNames = map (';':) argNames
             let firstZip  = zip (init renamedNames) preprocessedArgs
             let secondZip = (';':rarg, WithMD md $ LIST (drop (length (init renamedNames)) preprocessedArgs))
-            extendedEnv <- return . M.union (M.fromList (firstZip ++ [secondZip])) =<< ask
+            extendedEnv <- return . M.union (M.fromList (firstZip ++ [secondZip])) =<< getEnv
             -- |preprocess renamed macro body and replace argument names with argument expressions in it.
-            MT.withReaderT (const extendedEnv) (preprocess afterRename)
+            MT.withReaderT (const (extendedEnv, modul)) (preprocess afterRename) >>= wrapInClosureCall
     _ -> return rootExpr
 
 hasRest :: [Name] -> [Name] -> ([Name], Maybe Name)
