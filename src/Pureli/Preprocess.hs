@@ -28,8 +28,9 @@ getMod = ask >>= return . snd
 
 wrapInClosureCall :: WithMD Expr -> Preprocess Expr
 wrapInClosureCall (WithMD md expr) = do
-  modul <- getMod
-  return $ WithMD md $ LIST [WithMD md $ PROCEDURE $ Closure modul $ WithMD md $ Fun (FunArgs [] Nothing) expr]
+  --modul <- getMod
+  return $ WithMD md expr
+  --return $ WithMD md $ LIST [WithMD md $ PROCEDURE $ Closure modul $ WithMD md $ Fun (FunArgs [] Nothing) expr]
 
 -- |preprocess a module.
 preprocessModule :: Module -> MT.ExceptT Error MT.Identity Module

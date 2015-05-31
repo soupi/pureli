@@ -9,4 +9,4 @@
 (define main
   (do!
     (print! "hygiene test, expected result: 3")
-    (print! (let ((plus trace)) (test 1 2)))))
+    (print! (let ((x 1) (plus trace)) (test x 2)))))
