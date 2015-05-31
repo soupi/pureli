@@ -2,8 +2,6 @@ module Pureli.ParseNumber (parseNumber) where
 
 import Text.ParserCombinators.Parsec hiding (spaces)
 
-import Numeric (readOct, readHex, readFloat)
-
 import Pureli.AST
 
 parseNumber :: Parser Atom
@@ -16,9 +14,10 @@ parseNum = do
     c <- optionMaybe ( char '.')
     case c of
         Nothing -> (return . Integer . read) (sign s ++ whole)
-        Just dot -> do
+        Just _  -> do
             part <- many1 digit
             (return . Real . read) (sign s ++ whole ++ "." ++ part)
 
+sign :: Maybe a -> String
 sign s = case s of { Nothing -> ""; Just _ -> "-" }
 
