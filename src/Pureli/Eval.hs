@@ -168,9 +168,9 @@ evalProcedure operands (WithMD md (PROCEDURE (Closure closure_env (WithMD _ (Fun
   evaluated_args <- mapM eval operands
   let argsAsList = WithMD md $ QUOTE $ WithMD md $ LIST evaluated_args
   -- |extend environment with arguments
-  let extended_env = M.fromList [(args, argsAsList)] `M.union` closure_env
+  let extended_env = M.fromList [(args, argsAsList)] `M.union` getModEnv closure_env
   -- |evaluate the function's body in the extended environment
-  MT.withReaderT (changeEnv extended_env) (eval (WithMD md body))
+  MT.withReaderT (changeEnv extended_env . changeModule closure_env) (eval (WithMD md body))
 evalProcedure operands rootExpr@(WithMD md (PROCEDURE (Closure closure_env (WithMD _ (Fun (FunArgs args mrest) body))))) =
   let (operands_length, args_length) = (length operands, length args)
   in
@@ -183,9 +183,9 @@ evalProcedure operands rootExpr@(WithMD md (PROCEDURE (Closure closure_env (With
           -- |evaluate arguments
           evaluated_args <- mapM eval operands
           -- |extend environment with arguments
-          let extended_env = zipWithRest rest md args evaluated_args `M.union` closure_env
+          let extended_env = zipWithRest rest md args evaluated_args `M.union` getModEnv closure_env
           -- |evaluate the function's body in the extended environment
-          MT.withReaderT (changeEnv extended_env) (eval (WithMD md body))
+          MT.withReaderT (changeEnv extended_env . changeModule closure_env) (eval (WithMD md body))
       Nothing ->
         if operands_length /= args_length -- |^check arity
         then
@@ -194,9 +194,9 @@ evalProcedure operands rootExpr@(WithMD md (PROCEDURE (Closure closure_env (With
           -- |evaluate arguments
           evaluated_args <- mapM eval operands
           -- |extend environment with arguments
-          let extended_env = M.fromList (zip args evaluated_args) `M.union` closure_env
+          let extended_env = M.fromList (zip args evaluated_args) `M.union` getModEnv closure_env
           -- |evaluate the function's body in the extended environment
-          MT.withReaderT (changeEnv extended_env) (eval (WithMD md body))
+          MT.withReaderT (changeEnv extended_env . changeModule closure_env) (eval (WithMD md body))
 -- not a procedure
 evalProcedure _ rootExpr = throwErr (Just rootExpr) $ "not a procedure"
 
@@ -209,9 +209,9 @@ pureEvalProcedure operands (WithMD md (PROCEDURE (Closure closure_env (WithMD _ 
   evaluated_args <- liftFromEither $ seqParMap (pureEval modul) operands
   let argsAsList = WithMD md $ QUOTE $ WithMD md $ LIST evaluated_args
   -- |extend environment with arguments
-  let extended_env = M.fromList [(args, argsAsList)] `M.union` closure_env
+  let extended_env = M.fromList [(args, argsAsList)] `M.union` getModEnv closure_env
   -- |evaluate the function's body in the extended environment
-  MT.withReaderT (changeEnv extended_env) (eval (WithMD md body))
+  MT.withReaderT (changeEnv extended_env . changeModule closure_env) (eval (WithMD md body))
 pureEvalProcedure operands rootExpr@(WithMD md (PROCEDURE (Closure closure_env (WithMD _ (Fun (FunArgs args mrest) body))))) =
   let (operands_length, args_length) = (length operands, length args)
   in
@@ -225,9 +225,9 @@ pureEvalProcedure operands rootExpr@(WithMD md (PROCEDURE (Closure closure_env (
           -- |evaluate arguments
           evaluated_args <- liftFromEither $ seqParMap (pureEval modul) operands
           -- |extend environment with arguments
-          let extended_env = zipWithRest rest md args evaluated_args `M.union` closure_env
+          let extended_env = zipWithRest rest md args evaluated_args `M.union` getModEnv closure_env
           -- |evaluate the function's body in the extended environment
-          MT.withReaderT (changeEnv extended_env) (eval (WithMD md body))
+          MT.withReaderT (changeEnv extended_env . changeModule closure_env) (eval (WithMD md body))
       Nothing ->
         if operands_length /= args_length -- |^check arity
         then
@@ -237,9 +237,9 @@ pureEvalProcedure operands rootExpr@(WithMD md (PROCEDURE (Closure closure_env (
           -- |evaluate arguments
           evaluated_args <- liftFromEither $ seqParMap (pureEval modul) operands
           -- |extend environment with arguments
-          let extended_env = M.fromList (zip args evaluated_args) `M.union` closure_env
+          let extended_env = M.fromList (zip args evaluated_args) `M.union` getModEnv closure_env
           -- |evaluate the function's body in the extended environment
-          MT.withReaderT (changeEnv extended_env) (eval (WithMD md body))
+          MT.withReaderT (changeEnv extended_env . changeModule closure_env) (eval (WithMD md body))
 -- not a procedure
 pureEvalProcedure _ rootExpr = throwErr (Just rootExpr) $ "not a procedure"
 
@@ -493,11 +493,12 @@ evalError rootExpr = \case
 -- |evaluate a 'lambda' expression
 evalLambda :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
 evalLambda rootExpr@(WithMD exprMD _) exprs = do
-  env <- ask >>= return . getEnv
+  env   <- ask >>= return . getEnv
+  modul <- ask >>= return . getModule
   case exprs of
     -- |check arity
     [WithMD _ (ATOM (Symbol argName)), (WithMD _ body)] ->
-      lift $ return $ WithMD exprMD $ PROCEDURE $ Closure env $ WithMD exprMD $ Fun (FunArgsList argName) body
+      lift $ return $ WithMD exprMD $ PROCEDURE $ Closure modul $ WithMD exprMD $ Fun (FunArgsList argName) body
     [WithMD _ (LIST symbolList), bodyExpr@(WithMD _ body)] -> do
       -- |check for duplicate argument names
       symbols <- liftFromEither $ seqParMap toSymbol symbolList
@@ -506,8 +507,8 @@ evalLambda rootExpr@(WithMD exprMD _) exprs = do
       -- |return a procedure
       else case validArgs symbols of
         (False, _) -> throwErr (Just bodyExpr) $ "unexpected &. rest argument is not last"
-        (True, Nothing) -> lift $ return $ WithMD exprMD $ PROCEDURE $ Closure env $ WithMD exprMD $ Fun (FunArgs symbols Nothing) body
-        (True, Just vr) -> lift $ return $ WithMD exprMD $ PROCEDURE $ Closure env $ WithMD exprMD $ Fun (FunArgs (init symbols) (Just vr)) body
+        (True, Nothing) -> lift $ return $ WithMD exprMD $ PROCEDURE $ Closure modul $ WithMD exprMD $ Fun (FunArgs symbols Nothing) body
+        (True, Just vr) -> lift $ return $ WithMD exprMD $ PROCEDURE $ Closure modul $ WithMD exprMD $ Fun (FunArgs (init symbols) (Just vr)) body
     xs -> throwErr (Just rootExpr) $ "bad arity: lambda expects 2 arguments, got " ++ show (length xs)
 
 
