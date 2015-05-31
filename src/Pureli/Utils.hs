@@ -115,3 +115,18 @@ listMods n modul =
       ms = fmap ((replicate (n+2) ' ' ++) . getModName) (getModImports modul)
   in
     ((replicate n ' ' ++ m) : ms ++ concatMap (listMods n) (getModImports modul))
+
+
+displayCommands :: String -> [(String, String)] -> [String]
+displayCommands opener cmds = fmap (displayCommand opener (cmdWithSpaces n)) cmds
+  where n = 8 + foldr (\str acc -> max (length (fst str)) acc) 0 cmds
+
+cmdWithSpaces :: Int -> String -> String
+cmdWithSpaces n str = str ++ replicate (n - length str) ' '
+
+displayCommand :: String -> (String -> String) -> (String, String) -> String
+displayCommand opener paddCmd (cmd, desc) = opener ++ paddCmd cmd ++ desc
+
+dashOpener, spaceOpener :: String
+dashOpener  = "  - "
+spaceOpener = "    "

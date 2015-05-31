@@ -77,7 +77,7 @@ welcomeMsg = unlines ["REPL for Pureli, a purely functional, dynamically typed,"
 -- |
 -- a help message to be shown when user enters :help
 helpMsg :: String
-helpMsg = unlines $ (["","  Available Commands:",""] ++) $ displayCommands commandsDesc
+helpMsg = unlines $ (["","  Available Commands:",""] ++) $ displayCommands spaceOpener commandsDesc
 
 -- |
 -- a list of available commands and their description
@@ -90,12 +90,3 @@ commandsDesc =
   ,(":reset", "Reset environment")
   ,(":q",     "Quit repl")]
 
-displayCommands :: [(String, String)] -> [String]
-displayCommands cmds = fmap (displayCommand (cmdWithSpaces n)) cmds
-  where n = 8 + foldr (\str acc -> max (length (fst str)) acc) 0 cmds
-
-cmdWithSpaces :: Int -> String -> String
-cmdWithSpaces n str = str ++ replicate (n - length str) ' '
-
-displayCommand :: (String -> String) -> (String, String) -> String
-displayCommand paddCmd (cmd, desc) = "    " ++ paddCmd cmd ++ desc

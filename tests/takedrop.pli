@@ -1,0 +1,48 @@
+(module main)
+
+(defmacro cond
+  [() (error "*** error: cond - non-exhuastive patterns")]
+  [(clause1 &rest)
+    (if (eval (car clause1))
+        (eval (car (cdr clause1)))
+        (cond &rest))])
+
+(define cons (x xs)
+  (++ (list x) xs))
+
+(define take (lst i)
+  (if (> i 0)
+      (slice 0 i lst)
+      ()))
+
+(define drop (lst i)
+  (if (> i 0)
+      (drop (cdr lst) (- i 1))
+      lst))
+
+(define part (lst i)
+  (list (take lst i)
+        (drop lst i)))
+
+(define mergelists (left right)
+  (cond
+    '((empty? left) right)
+    '((empty? right) left)
+    '((< (car left) (car right))
+      (cons (car left) (mergelists (cdr left) right)))
+    '(#t
+      (cons (car right) (mergelists left (cdr right))))))
+
+(define mergesort (lst)
+  (if (>= 1 (length lst))
+      lst
+      (let ([x (/ (length lst) 2)])
+           (mergelists
+              (mergesort (take lst x))
+              (mergesort (drop lst x))))))
+
+(define main
+  (do!
+    [let! result (pure (mergesort (list 100 4 3 6 5 7 1 1 -1)))]
+    [print! "take 3 from (1,2,3) is: "]
+    [print! result]))
