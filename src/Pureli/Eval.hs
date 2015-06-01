@@ -602,6 +602,7 @@ compareAtoms  f _ (ATOM x@(Integer _)) (ATOM y@(Integer _)) = return $ f x y
 compareAtoms  f _ (ATOM x@(Real _)) (ATOM y@(Real _)) = return $ f x y
 compareAtoms  f _ (ATOM x@(String _)) (ATOM y@(String _)) = return $ f x y
 compareAtoms  f _ (ATOM x@(Bool _)) (ATOM y@(Bool _)) = return $ f x y
+compareAtoms  f _ (QUOTE (WithMD _ (ATOM x@(Symbol _)))) (QUOTE (WithMD _ (ATOM y@(Symbol _)))) = return $ f x y
 compareAtoms  _ expr _ _ = throwE $ Error (Just expr) "cannot compare types"
 
 
