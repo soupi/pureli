@@ -17,6 +17,8 @@ import Pureli.AST
 import Pureli.Printer()
 
 
+import Debug.Trace
+
 -- |evaluation type
 type Preprocess a = MT.ReaderT (Env, Module) (MT.ExceptT Error MT.Identity) (WithMD a)
 
@@ -112,7 +114,7 @@ preprocessMacro :: WithMD Expr -> WithMD Expr -> [WithMD Expr] -> Preprocess Exp
 preprocessMacro macro rootExpr operands =
   case macro of
     WithMD md (LIST []) -> throwErr (Just rootExpr) $ "arity problem, defmacro at " ++ show md ++ "does not take " ++ show (length operands) ++ " arguments"
-    WithMD md (LIST (WithMD _ (LIST [WithMD smd (ATOM (Symbol args)), body]):_)) ->
+    WithMD md (LIST (WithMD _ (LIST [WithMD smd (ATOM (Symbol args)), body]):_)) -> -- |^argument is a list
       do
         modul <- getMod
         -- |preprocess arguments

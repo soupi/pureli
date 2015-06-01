@@ -1,0 +1,9 @@
+(module main)
+
+(define main
+  (pure (let ((tmp 5)) (test (+ tmp 9)))))
+
+(defmacro test
+  ((x)
+   (let ((tmp 1))
+     (+ tmp x))))
