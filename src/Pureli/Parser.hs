@@ -10,6 +10,7 @@ import Text.ParserCombinators.Parsec ((<|>))
 import qualified Text.Parsec as P
 import qualified Text.Parsec.String as P (Parser)
 
+import Pureli.Utils (duplicates, stripMD)
 import Pureli.AST
 import Pureli.Printer()
 import qualified Pureli.Lexer as L
@@ -220,8 +221,14 @@ parseExpr name input = case P.parse (P.many comments >> withMD expr) name input 
 
 parseFile :: String -> String -> Either String [WithMD ModuleDef]
 parseFile name input = case P.parse (P.many comments >> modules) name input of
-  Left err -> Left (show err)
-  Right val -> Right val
+  Left err  -> Left (show err)
+  Right modefs ->
+    flip mapM modefs (\modef ->
+      let dups = duplicates $ map fst (modMacros $ stripMD modef) ++ map fst (modDefs $ stripMD modef)
+      in
+        if   null dups
+        then Right modef
+        else Left $ unwords ["module",  modName $ stripMD modef, "in file", name, "has duplicate definitions of:", show dups])
 
 parseReqDefExp :: String -> String -> Either String ReqDefExp
 parseReqDefExp name input =
