@@ -102,7 +102,7 @@ evalModule :: Module -> MT.ExceptT Error IO (WithMD Expr)
 evalModule modul =
   case M.lookup "main" (getModEnv modul) of
     Nothing   -> throwE $ Error Nothing $ "No main function in program \n*** " ++ show (map fst (M.toList (getModEnv modul)))
-    Just expr -> MT.runReaderT (eval expr) (EvalState modul ioBuiltins)
+    Just expr@(WithMD md _) -> MT.runReaderT (eval $ WithMD md $ LIST [WithMD md $ ATOM $ Symbol "do!", expr]) (EvalState modul builtinsIO)
 
 
 -- |evaluate an expression in pure context
