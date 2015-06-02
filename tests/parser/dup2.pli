@@ -1,0 +1,9 @@
+(module main)
+
+(define x 5)
+
+(define f (y y) (+ x y))
+
+(define main
+  (print! (f 1 2)))
+

@@ -4,6 +4,7 @@
 
 module Pureli.Eval (initEvalState, addToEnv, addImport, replModule, evalExpr, evalModule) where
 
+import Control.Monad (liftM)
 import Control.Applicative ((<$>))
 import Control.Exception (IOException, catch)
 import Data.List (find)
@@ -128,12 +129,17 @@ eval exprWithMD@(WithMD md expr) =
     QUOTE l     -> return $ WithMD md $ QUOTE l
     LIST ls     -> evalOp exprWithMD ls
 
+getEnvironment :: Monad m => MEval m (Module, Env, Builtins m)
+getEnvironment = do
+  modul    <- liftM getModule ask
+  env      <- liftM getEnv ask
+  builtins <- liftM getBuiltins ask
+  return (modul, env, builtins)
+
 -- |evaluate a primitive expression
 evalAtom :: Monad m => WithMD Expr -> Atom -> Evaluation m Expr
 evalAtom rootExpr@(WithMD md _) atom = do
-  modul    <- ask >>= return . getModule
-  env      <- ask >>= return . getEnv
-  builtins <- ask >>= return . getBuiltins
+  (modul, env, builtins) <- getEnvironment
   case atom of
     Symbol var -> case M.lookup var env of
       Just v  -> eval v
@@ -148,7 +154,7 @@ evalAtom rootExpr@(WithMD md _) atom = do
 evalOp :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
 evalOp (WithMD md _) [] = return $ WithMD md $ ATOM Nil
 evalOp exprWithMD (WithMD md operator:operands) = do
-  builtins <- return . getBuiltins =<< ask
+  builtins <- liftM getBuiltins ask
   -- |decide what to do based on the operator
   case operator of
     -- |call the function
@@ -199,13 +205,13 @@ evalProcedure operands rootExpr@(WithMD md (PROCEDURE (Closure closure_env (With
           -- |evaluate the function's body in the extended environment
           MT.withReaderT (changeEnv extended_env . changeModule closure_env) (eval (WithMD md body))
 -- not a procedure
-evalProcedure _ rootExpr = throwErr (Just rootExpr) $ "not a procedure"
+evalProcedure _ rootExpr = throwErr (Just rootExpr) "not a procedure"
 
 
 -- |calls a function in pure context
 pureEvalProcedure :: [WithMD Expr] -> WithMD Expr -> PureEval (WithMD Expr)
 pureEvalProcedure operands (WithMD md (PROCEDURE (Closure closure_env (WithMD _ (Fun (FunArgsList args) body))))) = do
-  modul <- return . getModule =<< ask
+  modul <- liftM getModule ask
   -- |evaluate arguments
   evaluated_args <- liftFromEither $ seqParMap (pureEval modul) operands
   let argsAsList = WithMD md $ QUOTE $ WithMD md $ LIST evaluated_args
@@ -222,7 +228,7 @@ pureEvalProcedure operands rootExpr@(WithMD md (PROCEDURE (Closure closure_env (
         then
           throwErr (Just rootExpr) $ " arity problem: expecting at least " ++ show args_length ++ " arguments, got " ++ show operands_length
         else do
-          modul <- return . getModule =<< ask
+          modul <- liftM getModule ask
           -- |evaluate arguments
           evaluated_args <- liftFromEither $ seqParMap (pureEval modul) operands
           -- |extend environment with arguments
@@ -234,7 +240,7 @@ pureEvalProcedure operands rootExpr@(WithMD md (PROCEDURE (Closure closure_env (
         then
           throwErr (Just rootExpr) $ " arity problem: expecting " ++ show args_length ++ " arguments, got " ++ show operands_length
         else do
-          modul <- return . getModule =<< ask
+          modul <- liftM getModule ask
           -- |evaluate arguments
           evaluated_args <- liftFromEither $ seqParMap (pureEval modul) operands
           -- |extend environment with arguments
@@ -242,7 +248,7 @@ pureEvalProcedure operands rootExpr@(WithMD md (PROCEDURE (Closure closure_env (
           -- |evaluate the function's body in the extended environment
           MT.withReaderT (changeEnv extended_env . changeModule closure_env) (eval (WithMD md body))
 -- not a procedure
-pureEvalProcedure _ rootExpr = throwErr (Just rootExpr) $ "not a procedure"
+pureEvalProcedure _ rootExpr = throwErr (Just rootExpr) "not a procedure"
 
 
 
@@ -263,9 +269,7 @@ zipWithRemains (x:xs) (y:ys) =
 -- |tries to find symbol in environment and evaluate function call
 evalOpSymbol :: Monad m => WithMD Expr -> [WithMD Expr] -> Name -> Evaluation m Expr
 evalOpSymbol exprWithMD operands name = do
-  modul    <- ask >>= return . getModule
-  env      <- ask >>= return . getEnv
-  builtins <- ask >>= return . getBuiltins
+  (modul, env, builtins) <- getEnvironment
   case M.lookup name builtins of
     Just op -> op exprWithMD operands
     Nothing -> case M.lookup name env of
@@ -476,7 +480,7 @@ evalTrace rootExpr = \case
 evalTry :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
 evalTry rootExpr operands = go operands
   where go = \case
-            []    -> throwErr (Just rootExpr) $ "bad arity: expects at least 1 argument, got 0"
+            []    -> throwErr (Just rootExpr) "bad arity: expects at least 1 argument, got 0"
             [try] -> eval try
             (try:retry) -> do
               env <- ask
@@ -496,19 +500,20 @@ evalError rootExpr = \case
 -- |evaluate a 'lambda' expression
 evalLambda :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
 evalLambda rootExpr@(WithMD exprMD _) exprs = do
-  modul <- ask >>= return . getModule
+  modul <- liftM getModule ask
   case exprs of
     -- |check arity
-    [WithMD _ (ATOM (Symbol argName)), (WithMD _ body)] ->
+    [WithMD _ (ATOM (Symbol argName)), WithMD _ body] ->
       lift $ return $ WithMD exprMD $ PROCEDURE $ Closure modul $ WithMD exprMD $ Fun (FunArgsList argName) body
-    [WithMD _ (LIST symbolList), bodyExpr@(WithMD _ body)] -> do
+    [WithMD _ (LIST symbolList), WithMD _ body] -> do
       -- |check for duplicate argument names
       symbols <- liftFromEither $ seqParMap toSymbol symbolList
-      if length (duplicates symbols) > 0
-      then throwErr (Just bodyExpr) $ "lambda arguments must have different names"
-      -- |return a procedure
+      if not $ null (duplicates symbols)
+      then throwErr (Just rootExpr) "lambda arguments must have different names"
+      -- |check for unexpected &
       else case validArgs symbols of
-        (False, _) -> throwErr (Just bodyExpr) $ "unexpected &. rest argument is not last"
+        (False, _) -> throwErr (Just rootExpr) "unexpected &. rest argument is not last"
+        -- |return procedure
         (True, Nothing) -> lift $ return $ WithMD exprMD $ PROCEDURE $ Closure modul $ WithMD exprMD $ Fun (FunArgs symbols Nothing) body
         (True, Just vr) -> lift $ return $ WithMD exprMD $ PROCEDURE $ Closure modul $ WithMD exprMD $ Fun (FunArgs (init symbols) (Just vr)) body
     xs -> throwErr (Just rootExpr) $ "bad arity: lambda expects 2 arguments, got " ++ show (length xs)
@@ -549,17 +554,17 @@ evalLet rootExpr = \case
 -- |evaluate a 'let' expression
 pureEvalLet :: WithMD Expr -> [WithMD Expr] -> PureEval (WithMD Expr)
 pureEvalLet rootExpr operands = do
-  modul <- return . getModule =<< ask
+  modul <- liftM getModule ask
   case operands of
     -- |check arity
     [binders, body] -> case binders of
       -- |evaluate binds and evaluate body in extended environment
-      WithMD _ (LIST binds) -> liftFromEither (seqParMap evalLetBind binds) >>= \evaluated_binds -> liftFromEither $ pureEval (modul { getModEnv = M.fromList (evaluated_binds) `M.union` (getModEnv modul) }) body
+      WithMD _ (LIST binds) -> liftFromEither (seqParMap evalLetBind binds) >>= \evaluated_binds -> liftFromEither $ pureEval (modul { getModEnv = M.fromList evaluated_binds `M.union` getModEnv modul }) body
         where evalLetBind = \case
       -- |^evaluate binds
-                WithMD _ (LIST [WithMD _ (ATOM (Symbol name)), expr]) -> pureEval modul expr >>= \result -> return $ (name, result)
-                _  -> Left $ Error (Just rootExpr) $ "unexpected binds in let expression"
-      _ -> throwErr (Just rootExpr) $ "argument to let is not a list of bindings"
+                WithMD _ (LIST [WithMD _ (ATOM (Symbol name)), expr]) -> pureEval modul expr >>= \result -> return (name, result)
+                _  -> Left $ Error (Just rootExpr) "unexpected binds in let expression"
+      _ -> throwErr (Just rootExpr) "argument to let is not a list of bindings"
     ls -> throwErr (Just rootExpr) $ "let expects 2 arguments, got " ++ show (length ls)
 
 
@@ -567,7 +572,7 @@ pureEvalLet rootExpr operands = do
 -- |evaluate an 'if' expression. '#f' is false, everything else is true.
 evalIf :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
 evalIf rootExpr = \case
-    [bool, trueBranch, falseBranch] -> do
+    [bool, trueBranch, falseBranch] ->
       eval bool >>= \case
         WithMD _ (ATOM (Bool False)) -> eval falseBranch
         _                            -> eval trueBranch
@@ -577,7 +582,7 @@ evalIf rootExpr = \case
 evalCompare :: Monad m => (WithMD Expr-> Expr -> Expr -> MT.ExceptT Error m Bool) -> WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
 evalCompare test rootExpr@(WithMD exprMD _) operands = do
   -- |evaluate operands
-  modul <- ask >>= return . getModule
+  modul <- liftM getModule ask
   evalled <- liftFromEither $ seqParMap (pureEval modul) operands
   -- |test and return
   lift (testCompare rootExpr test evalled) >>= \case
@@ -677,7 +682,7 @@ evalList (WithMD exprMD _) elements = do
 -- |evaluate 'list' expression in pure context
 pureEvalList :: WithMD Expr -> [WithMD Expr] -> PureEval (WithMD Expr)
 pureEvalList (WithMD exprMD _) elements = do
-  modul <- return . getModule =<< ask
+  modul <- liftM getModule ask
   evalled <- liftFromEither $ seqParMap (pureEval modul) elements
   lift $ return $ WithMD exprMD $ QUOTE $ WithMD exprMD $ LIST evalled
 
@@ -741,13 +746,13 @@ evalMod rootExpr = evalArith (divide rootExpr mod) (const (MT.throwE $ Error (Ju
 -- |evaluate arithmetic expressions. converts integers to floats if an argument is a float.
 evalArith :: Monad m => ([Integer] -> MT.ExceptT Error m Integer) -> ([Double] -> MT.ExceptT Error m Double) -> WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
 evalArith intOp realOp rootExpr@(WithMD exprMD _) operands = do
-  modul   <- return . getModule =<< ask
+  modul   <- liftM getModule ask
   results <- liftFromEither $ seqParMap (evalToNumber modul rootExpr) operands
-  if length (filter isReal results) > 0
+  if any isReal results
   then
-    lift ((realOp $ fmap atomToDouble results) >>= return . WithMD exprMD . ATOM . Real)
+    lift (liftM (WithMD exprMD . ATOM . Real) (realOp $ fmap atomToDouble results))
   else
-    lift ((intOp $ fmap atomToInteger results) >>= return . WithMD exprMD . ATOM . Integer)
+    lift (liftM (WithMD exprMD . ATOM . Integer) (intOp $ fmap atomToInteger results))
 
 
 -- |evaluate '++' expression for lists and strings.
@@ -766,7 +771,7 @@ evalAppend rootExpr@(WithMD exprMD _) operands =
 -- |evaluate '++' expression for lists and strings.
 pureEvalAppend :: WithMD Expr -> [WithMD Expr] -> PureEval (WithMD Expr)
 pureEvalAppend rootExpr@(WithMD exprMD _) operands = do
-  modul <- return . getModule =<< ask
+  modul <- liftM getModule ask
   case seqParMap (pureEvalToList modul rootExpr) operands of
     Right results -> lift $ return $ WithMD exprMD $ QUOTE $ WithMD exprMD $ LIST $ concat results
     Left _ ->
@@ -812,7 +817,7 @@ evalLength rootExpr@(WithMD exprMD _) operands =
 -- |slice: a slice of a string or list
 evalSlice :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
 evalSlice rootExpr@(WithMD exprMD _) operands = do
-  modul <- return . getModule =<< ask
+  modul <- liftM getModule ask
   case operands of
     [start, end, value] -> do
       res <- sequence3
