@@ -85,11 +85,14 @@
 
 (define test-map! ()
   (do!
+    [print! "test list/map"]
     [print! (list/map show (list))]
     [print! (list/map show (list 1 2 3))]
     [print! (list/map std/id (list 1 2 3))]
+    [print! (list/map (lambda (x) (+ 0.0 x)) (list 1 2 3))]
     [print! (list/map (lambda (x) (+ 1 x)) (list 1 2 3))]))
 
 (define test-bind! ()
   (do!
+    [print! "test bind. expected result: #t"]
     [std/bind! (pure #t) print!]))
