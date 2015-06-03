@@ -146,7 +146,9 @@ evalAtom rootExpr@(WithMD md _) atom = do
       Nothing -> case lookupInModule var modul of
         Just (v, vMod) -> MT.withReaderT  (changeModule vMod) (eval v)
         Nothing -> case M.lookup var builtins of
-          Nothing -> throwErr (Just rootExpr) $ "Could not find " ++ show var ++ " in environment: " ++ show (fst <$> M.toList env)
+          Nothing -> throwErr (Just rootExpr) $ case M.lookup var ioBuiltins of
+            Just _  -> "Cannot run IO action '" ++ var ++ "' in pure context."
+            Nothing -> "Could not find " ++ show var ++ " in environment: " ++ show (fst <$> M.toList env)
           Just _  -> return $ WithMD md $ ATOM $ Symbol var -- |^this will be handled later
     other -> return $ WithMD md (ATOM other)
 
@@ -272,13 +274,15 @@ evalOpSymbol exprWithMD operands name = do
   (modul, env, builtins) <- getEnvironment
   case M.lookup name builtins of
     Just op -> op exprWithMD operands
-    Nothing -> case M.lookup name env of
-      Just v  -> eval v >>= \result -> evalOp exprWithMD (result : operands)
-      Nothing -> case lookupInModule name modul of
-        Nothing -> throwErr (Just exprWithMD) $ " Could not find " ++ show name ++ " in environment: " ++ show (fst <$> M.toList env) ++ unlines ("": listMods 0 modul)
-        Just (v, vMod) -> do
-          result <- MT.withReaderT (changeModule vMod) (eval v)
-          MT.withReaderT (changeModule modul) $ evalOp exprWithMD (result : operands)
+    Nothing -> case M.lookup name ioBuiltins of
+      Just _  -> throwErr (Just exprWithMD) $ "Cannot run IO action '" ++ name ++ "' in pure context."
+      Nothing -> case M.lookup name env of
+        Just v  -> eval v >>= \result -> evalOp exprWithMD (result : operands)
+        Nothing -> case lookupInModule name modul of
+          Nothing -> throwErr (Just exprWithMD) $ " Could not find " ++ show name ++ " in environment: " ++ show (fst <$> M.toList env) ++ unlines ("": listMods 0 modul)
+          Just (v, vMod) -> do
+            result <- MT.withReaderT (changeModule vMod) (eval v)
+            MT.withReaderT (changeModule modul) $ evalOp exprWithMD (result : operands)
 
 -------------
 -- Builtins
@@ -413,11 +417,12 @@ evalSequence rootExpr@(WithMD exprMD _) = \case
 -- |evaluate a 'print!' IO action
 evalPrint :: WithMD Expr -> [WithMD Expr] -> IOEval Expr
 evalPrint _ [expr@(WithMD md _)] = do
-  evalled <- eval expr
-  lift $ lift $ case evalled of
-    (WithMD _ (ATOM (String str))) -> putStrLn str
-    _                              -> print evalled
-  returnIO $ WithMD md $ ATOM Nil
+  modul <- liftM getModule ask
+  let evalled = pureEval modul expr
+  case evalled of
+    Right (WithMD _ (ATOM (String str))) -> lift (lift $ putStrLn str) >> returnIO (WithMD md $ ATOM Nil)
+    Right result                         -> lift (lift $ print result) >> returnIO (WithMD md $ ATOM Nil)
+    Left  err                            -> lift $ MT.throwE err
 evalPrint expr xs = throwErr (Just expr) $ "bad arity, expected 1 argument, got: " ++ show (length xs)
 
 -- |evaluate a 'read!' IO action
@@ -430,8 +435,11 @@ evalRead expr xs = throwErr (Just expr) $ "bad arity, expected 0 arguments, got:
 -- |evaluate a 'print-file!' IO action
 evalPrintFile :: WithMD Expr -> [WithMD Expr] -> IOEval Expr
 evalPrintFile rootExpr [file@(WithMD md _), expr] = do
-  eFile   <- eval file
-  evalled <- eval expr
+  modul <- liftM getModule ask
+  let feOrFail = pureEval modul file >>= \f -> pureEval modul expr >>= \e -> return (f,e)
+  (eFile, evalled) <- case feOrFail of
+                        Left err -> lift $ MT.throwE err
+                        Right rs -> return rs
   case (eFile, evalled) of
     (WithMD _ (ATOM (String wfile)), WithMD _ (ATOM (String str))) -> lift $ lift $ writeFile wfile str
     (WithMD _ (ATOM (String wfile)), _) -> do
