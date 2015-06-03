@@ -3,8 +3,8 @@
 (defmacro cond
   [() (error "*** error: cond - non-exhuastive patterns")]
   [(clause1 &rest)
-    (if (eval (car clause1))
-        (eval (car (cdr clause1)))
+    (if (eval (car 'clause1))
+        (eval (car (cdr 'clause1)))
         (cond &rest))])
 
 (define cons (x xs)
@@ -26,11 +26,11 @@
 
 (define mergelists (left right)
   (cond
-    '((empty? left) right)
-    '((empty? right) left)
-    '((< (car left) (car right))
+    ((empty? left) right)
+    ((empty? right) left)
+    ((< (car left) (car right))
       (cons (car left) (mergelists (cdr left) right)))
-    '(#t
+    (#t
       (cons (car right) (mergelists left (cdr right))))))
 
 (define mergesort (lst)
@@ -44,5 +44,5 @@
 (define main
   (do!
     [let! result (pure (mergesort (list 100 4 3 6 5 7 1 1 -1)))]
-    [print! "take 3 from (1,2,3) is: "]
+    [print! "sorting the list (100 4 3 6 5 7 1 1 -1):"]
     [print! result]))
