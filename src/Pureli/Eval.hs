@@ -23,6 +23,7 @@ import Debug.Trace
 import Pureli.Utils
 import Pureli.AST
 import Pureli.Printer()
+import Pureli.Parser (parseExpr, getMDSource)
 
 
 -----------------
@@ -317,6 +318,7 @@ pureBuiltins =
     ,("zero?",      evalIs isZeroTest)
     ,("nil?",       evalIs isNilTest)
     ,("empty?",     evalIs isEmptyTest)
+    ,("symbol?",    evalIs isSymbolTest)
     ,("string?",    evalIs isStringTest)
     ,("integer?",   evalIs isIntegerTest)
     ,("real?",      evalIs isRealTest)
@@ -342,6 +344,7 @@ pureBuiltins =
     ,("quote",  evalQuote)
     ,("mquote", evalQuote)
     ,("eval", evalEval)
+    ,("read-string", evalReadString)
     ,("let", evalLet)
     ,("letrec", evalLetrec)]
 
@@ -665,6 +668,11 @@ isStringTest :: Expr -> Bool
 isStringTest (ATOM (String _)) = True
 isStringTest _                 = False
 
+-- |test symbol?
+isSymbolTest :: Expr -> Bool
+isSymbolTest (QUOTE (WithMD _ (ATOM (Symbol _)))) = True
+isSymbolTest _ = False
+
 -- |test list?
 isListTest :: Expr -> Bool
 isListTest (QUOTE (WithMD _ (LIST _))) = True
@@ -674,7 +682,7 @@ isListTest _ = False
 -- |test procedure?
 isFunTest :: Expr -> Bool
 isFunTest (PROCEDURE _) = True
-isFunTest (LIST (WithMD _ (ATOM (Symbol "lambda")) : (WithMD _ (LIST _)) : _)) = True
+isFunTest (LIST (WithMD _ (ATOM (Symbol "lambda")) : WithMD _ (LIST _) : _)) = True
 isFunTest (ATOM (Symbol s)) =
   case M.lookup s builtinsID of
     Nothing -> False
@@ -725,6 +733,14 @@ evalEval rootExpr = \case
   [element] -> eval element >>= \case
     WithMD _ (QUOTE expr) -> eval expr
     expr                  -> eval expr >>= eval
+  xs        ->throwErr (Just rootExpr) $ "bad arity, expected 1 argument, got: " ++ show (length xs)
+
+-- |converts a string to a quote
+evalReadString :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
+evalReadString rootExpr = \case
+  [element] -> eval element >>= \case
+    WithMD md (ATOM (String str)) -> either (throwErr (Just rootExpr)) (return . WithMD md . QUOTE) $ parseExpr (getMDSource md) str
+    _                             -> throwErr (Just rootExpr) "read-string expects a string"
   xs        ->throwErr (Just rootExpr) $ "bad arity, expected 1 argument, got: " ++ show (length xs)
 
 

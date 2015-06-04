@@ -1,6 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 
-module Pureli.Parser (parseExpr, parseFile, parseReqDefExp) where
+module Pureli.Parser (parseExpr, parseFile, parseReqDefExp, getMDSource) where
 
 import Control.Applicative (pure, (<$>))
 
@@ -236,3 +236,5 @@ parseReqDefExp name input =
     Left  err -> Left (show err)
     Right val -> Right val
 
+getMDSource :: Metadata -> String
+getMDSource = P.sourceName

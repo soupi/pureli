@@ -17,13 +17,13 @@ Built-in Procedures
 -------------------
 
 - Arithmetic operations (`+`, `-`, `*`, `/`, `mod`)
-- Tests (`zero?`, `empty?`, `nil?`, `number?`, `integer?`, `real?`, `list?`. `string?`, `procedure?`)
+- Tests (`zero?`, `empty?`, `nil?`, `number?`, `integer?`, `real?`, `list?`. `string?`, `procedure?`, `symbol?`)
 - Comparison (`==`, `<>`, `>`, `<`, `>=`, `<=`)
 - List operations (`list`, `car`, `cdr`, `++`, `slice`, `length`)
 - `show` expression
 - `if` expression
 - `let` and `letrec`
-- `quote`, `mquote` and `eval`
+- `quote`, `mquote`, `eval` and `read-string`
 - `error`, `try` and `trace`
 - `lambda` expression
 
