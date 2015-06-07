@@ -54,9 +54,17 @@
     ((<= (car lst) (apply min (cdr lst)))(car lst))
     (#t (apply min (cdr lst)))))
 
+(define abs (x)
+  (if (< x 0) (* x -1) x))
+
+(define gcd (a b)
+  (cond ((= b 0) a)
+        (#t (gcd b (mod a b)))))
+
 (define main
   (do!
-    [print! (max 1 2 5 -1)]
+    [print! (max 1 2 3 -1)]
+    [print! (gcd 1024 516)]
     [let! result (pure (min 1 2 5 -1))]
     [print! "Merge List Result:"]
     [print! result]))
