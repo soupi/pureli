@@ -60,11 +60,14 @@
 (define gcd (a b)
   (cond ((= b 0) a)
         (#t (gcd b (mod a b)))))
+(define lcm (a b)
+  (/ (* (abs a) (abs b)) (gcd a b)))
 
 (define main
   (do!
     [print! (max 1 2 3 -1)]
     [print! (gcd 1024 516)]
+    [print! (lcm 12 18)]
     [let! result (pure (min 1 2 5 -1))]
     [print! "Merge List Result:"]
     [print! result]))
