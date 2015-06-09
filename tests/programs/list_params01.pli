@@ -5,9 +5,8 @@
       0
       (+ (car rest) (apply plus (cdr rest)))))
 
-(defmacro apply
-  ((op lst)
-   (eval (++ (list op) lst))))
+(define apply (op lst)
+  (eval (++ (list op) lst)))
 
 (defmacro chain
   ((op) op)
