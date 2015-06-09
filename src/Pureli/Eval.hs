@@ -6,6 +6,7 @@ module Pureli.Eval (initEvalState, addToEnv, addImport, replModule, evalExpr, ev
 
 import Control.Monad (liftM)
 import Control.Applicative ((<$>))
+import Data.Foldable (forM_)
 import Control.Exception (IOException, catch)
 import Data.List (find)
 import Control.Monad.Trans.Class  (lift, MonadTrans)
@@ -47,12 +48,16 @@ type IOEval a = Evaluation IO a
 
 instance P.NFData Error
 
--- |environment and builtin function
+-- |environment and builtin function: we need to save these things to know how
+-- should we evaluate expressions
 data EvalState m = EvalState { getModule :: Module, getBuiltins :: Builtins m }
 
+-- |getting the environment
 getEnv :: EvalState m -> Env
 getEnv = getModEnv . getModule
 
+-- |find an expression in the module by name, so we can evaluate
+-- the expression in it's environment
 lookupInModule :: Name -> Module -> Maybe (WithMD Expr, Module)
 lookupInModule name modul =
   case M.lookup name (getModExports modul) of
@@ -69,10 +74,11 @@ lookupInModule name modul =
 updateEnv ::  (Env -> Env) -> EvalState m -> EvalState m
 updateEnv f   state = state { getModule = (getModule state) { getModEnv = f (getModEnv (getModule state)) } }
 
-
+-- |add a named expression to a module's environment
 addToEnv :: (Name, WithMD Expr) -> Module -> Module
 addToEnv (name, expr) modul = modul { getModEnv = M.insert name expr (getModEnv modul) }
 
+-- |add a module to import list of another module
 addImport :: Module -> Module -> Module
 addImport imprt modul = modul { getModImports = imprt : getModImports modul }
 
@@ -82,7 +88,7 @@ changeEnv env state = state { getModule = (getModule state) { getModEnv = env } 
 
 -- |change the module
 changeModule :: Module -> EvalState m -> EvalState m
-changeModule modu state = state { getModule = modu }
+changeModule modul state = state { getModule = modul }
 
 -- |change the builtin functions
 changeBuiltins ::  Builtins m -> EvalState t -> EvalState m
@@ -92,6 +98,7 @@ changeBuiltins builtins state = state { getBuiltins = builtins }
 initEvalState :: EvalState IO
 initEvalState = EvalState (Module "" "REPL" [] emptyEnv emptyEnv emptyEnv emptyEnv) builtinsIO
 
+-- |an initial empty module for a repl
 replModule :: Module
 replModule =  Module "" "REPL" [] emptyEnv emptyEnv emptyEnv emptyEnv
 
@@ -118,10 +125,12 @@ pureEval modul exprWithMD@(WithMD md expr) =
       LIST ls     -> evalOp exprWithMD ls
 
 
+-- |evaluate an expression in a module in IO context
 evalExpr :: Module -> WithMD Expr -> IO (Either Error (WithMD Expr))
 evalExpr modul expr = MT.runExceptT $ MT.runReaderT (eval expr) $ EvalState modul builtinsIO
 
--- |evaluate an expression
+-- |evaluate an expression in any context
+-- PROCEDURE and QUOTE are returned without evaluation
 eval :: Monad m => WithMD Expr -> Evaluation m Expr
 eval exprWithMD@(WithMD md expr) =
   case expr of
@@ -130,6 +139,7 @@ eval exprWithMD@(WithMD md expr) =
     QUOTE l     -> return $ WithMD md $ QUOTE l
     LIST ls     -> evalOp exprWithMD ls
 
+-- |get the environment from inside of a monad
 getEnvironment :: Monad m => MEval m (Module, Env, Builtins m)
 getEnvironment = do
   modul    <- liftM getModule ask
@@ -138,6 +148,8 @@ getEnvironment = do
   return (modul, env, builtins)
 
 -- |evaluate a primitive expression
+-- a Symbol is searched in environment and is evaluated
+-- any other Atom is simply returned
 evalAtom :: Monad m => WithMD Expr -> Atom -> Evaluation m Expr
 evalAtom rootExpr@(WithMD md _) atom = do
   (modul, env, builtins) <- getEnvironment
@@ -153,7 +165,7 @@ evalAtom rootExpr@(WithMD md _) atom = do
           Just _  -> return $ WithMD md $ ATOM $ Symbol var -- |^this will be handled later
     other -> return $ WithMD md (ATOM other)
 
--- |evaluate an operation application
+-- |evaluate a function application
 evalOp :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
 evalOp (WithMD md _) [] = return $ WithMD md $ ATOM Nil
 evalOp exprWithMD (WithMD md operator:operands) = do
@@ -161,7 +173,7 @@ evalOp exprWithMD (WithMD md operator:operands) = do
   -- |decide what to do based on the operator
   case operator of
     -- |call the function
-    (PROCEDURE _)     -> case M.lookup ";evalProcedure" builtins of -- evalProcedure operands (WithMD md operator)
+    (PROCEDURE _)     -> case M.lookup ";evalProcedure" builtins of -- |^evaluate Procedure in either context
       Nothing -> throwErr (Just exprWithMD) "implementation bug: could no evaluate procedure. please report this"
       Just ep -> ep (WithMD md operator) operands
     -- |evaluate the operator first and try again
@@ -255,18 +267,19 @@ pureEvalProcedure _ rootExpr = throwErr (Just rootExpr) "not a procedure"
 
 
 
-
+-- |bind a list of variable names and a rest variable with a list of expressions
 zipWithRest :: Ord k => k -> Metadata -> [k] -> [WithMD Expr] -> M.Map k (WithMD Expr)
 zipWithRest restVar md args ops =
-  case zipWithRemains args ops of
+  case zipWithRemains (,) args ops of
       (zipped, rest) -> M.fromList $ (restVar, WithMD md (LIST (WithMD md (ATOM $ Symbol "list") : rest))) : zipped
 
-zipWithRemains :: [a] -> [b] -> ([(a,b)],[b])
-zipWithRemains [] rest = ([], rest)
-zipWithRemains _  []   = ([], [])
-zipWithRemains (x:xs) (y:ys) =
-  case zipWithRemains xs ys of
-      (zipped, rest) -> ((x,y):zipped, rest)
+-- |zip and get a list of unzipped elements
+zipWithRemains :: (a -> b -> c) -> [a] -> [b] -> ([c],[b])
+zipWithRemains _ [] rest = ([], rest)
+zipWithRemains _ _  []   = ([], [])
+zipWithRemains f (x:xs) (y:ys) =
+  case zipWithRemains f xs ys of
+      (zipped, rest) -> (f x y : zipped, rest)
 
 
 -- |tries to find symbol in environment and evaluate function call
@@ -289,6 +302,7 @@ evalOpSymbol exprWithMD operands name = do
 -- Builtins
 -------------
 
+-- |a type for built-in functions in any context
 type Builtins m = M.Map Name (WithMD Expr -> [WithMD Expr] -> Evaluation m Expr)
 
 -- |pure builtins in the identity monad
@@ -301,6 +315,7 @@ builtinsIO = pureBuiltins `M.union` ioBuiltins
 
 
 -- |pure builtins in an arbitrary monad
+-- to add a new built-in function: add it to the map
 pureBuiltins :: Monad m => Builtins m
 pureBuiltins =
   M.fromList
@@ -325,12 +340,12 @@ pureBuiltins =
     ,("number?",    evalIs isNumberTest)
     ,("procedure?", evalIs isFunTest)
     ,("list?",      evalIs isListTest)
-    ,("=",      evalCompare (compareAtoms (==)))
-    ,("<>",     evalCompare (compareAtoms (/=)))
-    ,("<",      evalCompare (compareAtoms (<)))
-    ,(">",      evalCompare (compareAtoms (>)))
-    ,("<=",     evalCompare (compareAtoms (<=)))
-    ,(">=",     evalCompare (compareAtoms (>=)))
+    ,("=",      evalCompare (compareExprs (==)))
+    ,("<>",     evalCompare (compareExprs (/=)))
+    ,("<",      evalCompare (compareExprs (<)))
+    ,(">",      evalCompare (compareExprs (>)))
+    ,("<=",     evalCompare (compareExprs (<=)))
+    ,(">=",     evalCompare (compareExprs (>=)))
     ,("length", evalLength)
     ,("slice", evalSlice)
     ,("show", evalShow)
@@ -349,9 +364,7 @@ pureBuiltins =
     ,("letrec", evalLetrec)]
 
 
-
-
-
+-- |redefining parallel built-in functions
 pureContextBuiltins :: Builtins MT.Identity
 pureContextBuiltins =
   M.fromList
@@ -370,12 +383,12 @@ ioBuiltins = M.fromList [("pure",  evalPure)
                         ,("print-file!", evalPrintFile)
                         ,("read-file!",  evalReadFile)]
 
--- |take the value from an IO context
+-- |takes the value from an IO context
 fromIO :: WithMD Expr -> IOEval Expr
 fromIO (WithMD _ (QUOTE (WithMD _ (LIST [WithMD _ (ATOM (Symbol ";IO")), result])))) = lift $ return result
 fromIO rootExpr = throwErr (Just rootExpr) "not an IO action"
 
--- |insert a value into an IO context
+-- |inserts a value into an IO context
 returnIO :: (MonadTrans t, Monad m) => WithMD Expr -> t m (WithMD Expr)
 returnIO expr@(WithMD md _) = lift $ return $ WithMD md $ QUOTE $ WithMD md $ LIST [WithMD md (ATOM (Symbol ";IO")), expr]
 
@@ -383,7 +396,7 @@ returnIO expr@(WithMD md _) = lift $ return $ WithMD md $ QUOTE $ WithMD md $ LI
 -- IO
 --------
 
--- |evaluate 'pure' action
+-- |evaluate a 'pure' action and insert it into an IO context
 evalPure :: WithMD Expr -> [WithMD Expr] -> IOEval Expr
 evalPure rootExpr = \case
   -- |check arity
@@ -447,9 +460,7 @@ evalPrintFile rootExpr [file@(WithMD md _), expr] = do
     (WithMD _ (ATOM (String wfile)), WithMD _ (ATOM (String str))) -> lift $ lift $ writeFile wfile str
     (WithMD _ (ATOM (String wfile)), _) -> do
       result <- lift $ lift ((writeFile wfile (show evalled) >> return Nothing) `catch` (\e -> return $ Just $ show (e :: IOException)))
-      case result of
-        Nothing -> return ()
-        Just er -> throwErr (Just rootExpr) er
+      forM_ result $ throwErr (Just rootExpr)
     _ -> throwErr (Just eFile) "unexpected filepath"
   returnIO $ WithMD md $ ATOM Nil
 evalPrintFile expr xs = throwErr (Just expr) $ "bad arity, expected 2 argument, got: " ++ show (length xs)
@@ -467,7 +478,6 @@ evalReadFile expr@(WithMD md _) [file] = do
     _                                -> throwErr (Just eFile) "unexpected filepath"
   returnIO $ WithMD md $ ATOM $ String input
 evalReadFile expr xs = throwErr (Just expr) $ "bad arity, expected 1 arguments, got: " ++ show (length xs)
-
 
 ----------
 -- Pure
@@ -489,7 +499,7 @@ evalTrace rootExpr = \case
 
 -- |evaluate a 'try' expression. try will return the first expression that does not fail to evaluate
 evalTry :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
-evalTry rootExpr operands = go operands
+evalTry rootExpr = go
   where go = \case
             []    -> throwErr (Just rootExpr) "bad arity: expects at least 1 argument, got 0"
             [try] -> eval try
@@ -504,8 +514,6 @@ evalError rootExpr = \case
     res <- eval err
     throwErr (Just res) "Error thrown by the user"
   xs -> throwErr (Just rootExpr) $ "bad arity: expects 1 argument, got " ++ show (length xs)
-
-
 
 
 -- |evaluate a 'lambda' expression
@@ -542,7 +550,7 @@ evalLetrec rootExpr = \case
     -- |^check let arguments form, convert to (Name, WithMD Expr) but don't evaluate
               [] -> return []
               (WithMD _ (LIST [WithMD _ (ATOM (Symbol name)), expr]) :xs) -> return . ((name, expr):) =<< evalLetrecBinds xs
-              _  -> throwE $ Error (Just rootExpr) $ "unexpected binds in let expression"
+              _  -> throwE $ Error (Just rootExpr) "unexpected binds in let expression"
     expr -> throwErr (Just expr) "second argument to let is not a list of bindings"
   ls -> throwErr (Just rootExpr) $ "let expects 2 arguments, got " ++ show (length ls)
 
@@ -552,17 +560,17 @@ evalLet rootExpr = \case
   -- |check arity
   [binders, body] -> case binders of
     -- |evaluate binds and evaluate body in extended environment
-    WithMD _ (LIST binds) -> evalLetBinds binds >>= \evaluated_binds -> MT.withReaderT (updateEnv (M.fromList (evaluated_binds) `M.union`)) $ eval body
+    WithMD _ (LIST binds) -> evalLetBinds binds >>= \evaluated_binds -> MT.withReaderT (updateEnv (M.fromList evaluated_binds `M.union`)) $ eval body
       where evalLetBinds = \case
     -- |^evaluate binds
               [] -> lift $ return []
               (WithMD _ (LIST [WithMD _ (ATOM (Symbol name)), expr]) :xs) -> eval expr >>= \result -> return . ((name, result):) =<< evalLetBinds xs
-              _  -> throwErr (Just rootExpr) $ "unexpected binds in let expression"
-    _ -> throwErr (Just rootExpr) $ "argument to let is not a list of bindings"
+              _  -> throwErr (Just rootExpr) "unexpected binds in let expression"
+    _ -> throwErr (Just rootExpr) "argument to let is not a list of bindings"
   ls -> throwErr (Just rootExpr) $ "let expects 2 arguments, got " ++ show (length ls)
 
 
--- |evaluate a 'let' expression
+-- |evaluate a pure 'let' expression in parallel
 pureEvalLet :: WithMD Expr -> [WithMD Expr] -> PureEval (WithMD Expr)
 pureEvalLet rootExpr operands = do
   modul <- liftM getModule ask
@@ -612,17 +620,23 @@ testCompare expr f (x:y:xs) = on (f expr) stripMD x y >>= \case
   True  -> testCompare expr f (y:xs)
   False -> return False
 
--- | evaluate '<'
-compareAtoms :: Monad m => (Atom -> Atom -> Bool) -> WithMD Expr-> Expr -> Expr -> MT.ExceptT Error m Bool
-compareAtoms  f _ (ATOM x@(Integer _)) (ATOM y@(Integer _)) = return $ f x y
-compareAtoms  f _ (ATOM x@(Real _)) (ATOM y@(Real _)) = return $ f x y
-compareAtoms  f _ (ATOM x@(String _)) (ATOM y@(String _)) = return $ f x y
-compareAtoms  f _ (ATOM x@(Bool _)) (ATOM y@(Bool _)) = return $ f x y
-compareAtoms  f _ (QUOTE (WithMD _ (ATOM x@(Symbol _)))) (QUOTE (WithMD _ (ATOM y@(Symbol _)))) = return $ f x y
-compareAtoms  _ expr _ _ = throwE $ Error (Just expr) "cannot compare types"
+-- | compare expressions by f
+-- atoms will be compared regularily
+-- lists will compare values in the same position
+-- lists of different length will not be compared and an error will be thrown
+compareExprs :: Monad m => (Atom -> Atom -> Bool) -> WithMD Expr -> Expr -> Expr -> MT.ExceptT Error m Bool
+compareExprs  f _ (ATOM x@(Integer _)) (ATOM y@(Integer _)) = return $ f x y
+compareExprs  f _ (ATOM x@(Real _)) (ATOM y@(Real _)) = return $ f x y
+compareExprs  f _ (ATOM x@(String _)) (ATOM y@(String _)) = return $ f x y
+compareExprs  f _ (ATOM x@(Bool _)) (ATOM y@(Bool _)) = return $ f x y
+compareExprs  f _ (QUOTE (WithMD _ (ATOM x@(Symbol _)))) (QUOTE (WithMD _ (ATOM y@(Symbol _)))) = return $ f x y
+compareExprs  f expr (QUOTE (WithMD _ (LIST xs))) (QUOTE (WithMD _ (LIST ys))) =
+  if length xs == length ys
+  then liftM and $ mapM (testCompare expr (compareExprs f)) $ zipWith (\x y -> [x,y]) xs ys
+  else throwE $ Error (Just expr) "cannot compare lists of different lengths"
+compareExprs  _ expr _ _ = throwE $ Error (Just expr) "cannot compare types"
 
-
--- |evaluate 'is-...' expressions
+-- |evaluate '...?' expressions
 evalIs :: Monad m => (Expr -> Bool) -> WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
 evalIs test rootExpr@(WithMD exprMD _) = \case
   [expr] -> eval expr >>= \case
@@ -681,13 +695,12 @@ isListTest _ = False
 
 -- |test procedure?
 isFunTest :: Expr -> Bool
-isFunTest (PROCEDURE _) = True
-isFunTest (LIST (WithMD _ (ATOM (Symbol "lambda")) : WithMD _ (LIST _) : _)) = True
-isFunTest (ATOM (Symbol s)) =
-  case M.lookup s builtinsID of
-    Nothing -> False
-    Just _  -> True
-isFunTest _             = False
+isFunTest = \case
+  (ATOM (Symbol s)) -> case M.lookup s builtinsID of
+                        Nothing -> False
+                        Just _  -> True
+  (PROCEDURE _) -> True
+  _             -> False
 
 -- |evaluate 'list' expression
 evalList :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
@@ -724,7 +737,7 @@ evalCdr rootExpr = \case
 -- |evaluate a 'quote' expression. don't evaluate argument
 evalQuote :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
 evalQuote rootExpr@(WithMD exprMD _) = \case
-  [element] -> lift $ return $ WithMD exprMD $ QUOTE $ element
+  [element] -> lift $ return $ WithMD exprMD $ QUOTE element
   xs        -> throwErr (Just rootExpr) $ "bad arity, expected 1 argument, got: " ++ show (length xs)
 
 -- |evaluate 'eval' expression. evaluate QUOTE
@@ -803,9 +816,6 @@ pureEvalAppend rootExpr@(WithMD exprMD _) operands = do
           Right results -> lift $ return $ WithMD exprMD $ ATOM $ String $ foldl (++) "" results
           Left _ -> throwErr (Just rootExpr) "bad arguments to append. all arguments must be of type string or list."
 
-
-
-
 -- |test if atom is real
 isReal :: Atom -> Bool
 isReal = \case
@@ -824,8 +834,7 @@ toSymbol :: WithMD Expr -> Either Error String
 toSymbol (WithMD _ (ATOM (Symbol s))) = return s
 toSymbol expr                         = Left $ Error (Just expr)  "expecting a symbol"
 
-
-
+-- |eval a 'length' expression on strings and lists
 evalLength :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
 evalLength rootExpr@(WithMD exprMD _) operands =
   case operands of
@@ -857,6 +866,7 @@ evalSlice rootExpr@(WithMD exprMD _) operands = do
         (_, _, Left e) -> lift $ MT.throwE e
     vs -> throwErr (Just rootExpr) $ " arity problem: expecting 3 arguments, got " ++ show (length vs)
 
+-- |evaluate an expression to an Integer
 evalAndGetInt :: (MonadTrans t, Monad (t (MT.ExceptT Error m)), Monad m) => Module -> WithMD Expr -> WithMD Expr -> t (MT.ExceptT Error m) (Either Error Integer)
 evalAndGetInt modul rootExpr e = do
   r <- case evalToNumber modul rootExpr e of
@@ -864,6 +874,7 @@ evalAndGetInt modul rootExpr e = do
          Left er -> lift $ MT.throwE er
   lift $ return $ castAtomToInteger rootExpr r
 
+-- |run 3 actions in an arbitrary monad
 sequence3 :: Monad m => (m a, m b, m c) -> m (a, b, c)
 sequence3 (x,y,z) = do
   r1 <- x
@@ -871,20 +882,23 @@ sequence3 (x,y,z) = do
   r3 <- z
   return (r1, r2, r3)
 
+-- |cast an atom to an integer
 castAtomToInteger :: WithMD Expr -> Atom -> Either Error Integer
 castAtomToInteger _ (Integer i) = return i
 castAtomToInteger e _           = Left $ Error (Just e) "Not an integer"
 
+-- |unsafely cast an atom to an integer
 -- dangerous!!!
 atomToInteger :: Atom -> Integer
 atomToInteger (Integer i) = i
-atomToInteger x           = error $ "implementation error, should not happend: " ++ show x
+atomToInteger x           = error $ "trying to cast an atom to an intger. implementation error, should not happend: " ++ show x
 
+-- |unsafely cast an atom to a double
 -- dangerous!!!
 atomToDouble :: Atom -> Double
 atomToDouble (Real d) = d
 atomToDouble (Integer i) = fromIntegral i
-atomToDouble x           = error $ "implementation error, should not happend: " ++ show x
+atomToDouble x           = error $ "trying to cast an atom to a double. implementation error, should not happend: " ++ show x
 
 pureEvaluation :: PureEval a -> Module -> Either Error a
 pureEvaluation go m =
