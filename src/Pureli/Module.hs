@@ -34,8 +34,6 @@ readModules filepath = do
         Left err  -> MT.throwE (Error Nothing err)
         Right res -> return res
 
--------------------------------------------------------------
-
 -- |
 -- Read a source file and return the modules within
 loadModule :: FilePath -> Name -> MT.ExceptT Error IO Module
@@ -50,6 +48,8 @@ loadModule filepath mName = do
 requiresToModules :: [Require] -> MT.ExceptT Error (MT.StateT (M.Map (Name, Name) Module) IO) [Module]
 requiresToModules = mapM cacheRequire
 
+-- |
+-- Will make sure there are no cyclic requires and will return a module if already required
 cacheRequire :: Require -> MT.ExceptT Error (MT.StateT (M.Map (Name, Name) Module) IO) Module
 cacheRequire modul@(Require mFile mName newName exposedDefs) =
   MT.lift MT.get >>= \mapping -> case M.lookup (mFile, mName) mapping of
@@ -67,14 +67,14 @@ cacheRequire modul@(Require mFile mName newName exposedDefs) =
     Nothing -> requireToModule modul
 
 
+-- |
+-- try to get a module from a file
 lookupModule :: Name -> Name -> [WithMD ModuleDef] -> Either String ModuleDef
 lookupModule mFile mName [] = Left $ "Couldn't find module " ++ mName ++ " in file " ++ mFile
 lookupModule mFile mName (WithMD _ m:ms) =
   if   mFile == modFile m && mName == modName m
   then return m
   else lookupModule mFile mName ms
-
-
 
 -- |converts a require to a module
 requireToMod :: Require -> IO (Either Error Module)
@@ -93,6 +93,7 @@ requireToModule (Require filePath mName newName exposing) = do
   return result
 
 
+-- |get and preprocess a specific module and all its requires from a file
 getModuleFromFile :: FilePath -> Name -> MT.ExceptT Error (MT.StateT (M.Map (FilePath, Name) Module) IO) Module
 getModuleFromFile fileName mName = do
   state <- MT.lift MT.get
@@ -116,7 +117,9 @@ getModuleFromFile fileName mName = do
           return preprocessedModule
 
 
-fromDefToModule :: [Module] -> ModuleDef -> Either Name Module
+-- |
+-- try to get a module from a ModuleDef
+fromDefToModule :: [Module] -> ModuleDef -> Either String Module
 fromDefToModule reqs def = do
   (exposedDefs, exposedMacros) <-
     case modExposes def of
@@ -134,14 +137,17 @@ fromDefToModule reqs def = do
            , getModEnv     = M.fromList $ modDefs def
            }
 
+-- |
+-- filter assoc list from list
 filterListMap :: (Show a, Eq a) => [a] -> [(a, b)] -> Either String [(a,b)]
-filterListMap [] _  = return []
+filterListMap []  _ = return []
 filterListMap _  [] = return []
 filterListMap (a:as) list = case lookup a list of
   Nothing -> Left $ "Could not find definition to expose: " ++ show a
   Just x  -> return . ((a,x):) =<< filterListMap as list
 
-
+-- |
+-- filter two assoc map from list
 which :: Eq a => [(a,b)] -> [(a,b)] -> [a] -> Either a [Either (a,b) (a,b)]
 which list1 list2 = mapM f
   where f x = case maybeToEither x (Left . (,) x <$> lookup x list1) of

@@ -1,3 +1,6 @@
+
+-- |
+-- This module defines how to lex the language
 module Pureli.Lexer where
 
 import Text.Parsec.String (Parser)

@@ -5,6 +5,8 @@ Done
 - **Parallelism**
 - Syntax highlight (for Atom: copy `language-pureli` directory to `~/.atom/packages/`)
 - REPL with require, definitions and environment
+- convert strings to numbers, booleans, quote ... completed with `read-string`
+- Handle duplications of arguments and definitions
 
 TODO
 ----
@@ -19,6 +21,4 @@ TODO
 
 ### Language Features
 
-- convert strings to numbers, booleans, quote
 - fix hygiene of macros
-- Handle duplications of arguments and definitions

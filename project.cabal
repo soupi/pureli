@@ -7,13 +7,13 @@ name:                Pureli
 -- PVP summary:      +-+------- breaking API changes
 --                   | | +----- non-breaking API additions
 --                   | | | +--- code changes with no API change
-version:             0.1.0
+version:             0.2.0
 synopsis:            A purely functional, dynamically typed, parallel interpreted, lisp-like programming language
 license:             BSD3
 license-file:        LICENSE
 author:              Gil Mizrahi, Moti Mizrahi
 Homepage:            https://bitbucket.org/suppi/project-lang
-maintainer:          soupiral@gmail.com, motimz@hotmail.com
+maintainer:          suppi@tutanota.com, motimz@hotmail.com
 category:            Language
 build-type:          Simple
 

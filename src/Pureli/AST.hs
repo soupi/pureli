@@ -1,8 +1,8 @@
--- |
--- The AST definition for the language
 
 {-# LANGUAGE DeriveGeneric #-}
 
+-- |
+-- The AST definition for the language
 module Pureli.AST where
 
 import qualified Data.Map    as M
@@ -15,10 +15,12 @@ import GHC.Generics                (Generic)
 -- definitions
 ------------------
 
--- | a possible repl expression
+-- |
+-- a possible repl expression
 data ReqDefExp = Req Require | Def (Name, WithMD Expr) | Exp (WithMD Expr)
 
 
+-- a definition of a module read from parser
 data ModuleDef = ModuleDef { modFile       :: IO.FilePath
                            , modName       :: Name
                            , modExposes    :: Maybe [Name]
@@ -28,7 +30,7 @@ data ModuleDef = ModuleDef { modFile       :: IO.FilePath
                            }
 
 -- |
--- A module definition
+-- A module definition and environment, created from ModuleDef
 data Module = Module { getModFile           :: IO.FilePath
                      , getModName           :: Name
                      , getModImports        :: [Module]
@@ -43,18 +45,21 @@ data Require = Require FilePath Name (Maybe Name) (Maybe [Name]) deriving (Show,
 
 -- |
 -- An environment for the interpreter.
---  used to find binded names and expression which were bound with let, letrec, let!, define or defmacro
+-- used to find binded names and expression which were bound with let, letrec, let!, define or defmacro
 type Env = M.Map Name (WithMD Expr)
+
+-- |
+-- metadata, current holds the position in the interpreted file
+type Metadata = P.SourcePos
 
 -- |
 -- holds metadata on the type
 data WithMD a = WithMD Metadata a deriving (Eq, Generic)
 
-removeMD :: WithMD a -> a
-removeMD (WithMD _ x) = x
 -- |
--- metadata, current holds the position in the interpreted file
-type Metadata = P.SourcePos
+-- remove metadata
+stripMD :: WithMD a -> a
+stripMD (WithMD _ x) = x
 
 -- |
 -- an alias for String
@@ -68,6 +73,10 @@ data Closure = Closure Module (WithMD Fun) deriving (Eq)
 -- a function is a list of argument names, maybe an additional 'rest' argument and a body
 data Fun = Fun FunArgs Expr deriving (Eq)
 
+-- |
+-- arguments for a function
+-- either it is a list of names arguments can be bind to on by one and a maybe a rest name to bind rest
+-- or a name to bind all arguments in a list
 data FunArgs = FunArgs [Name] (Maybe Name) | FunArgsList Name deriving (Eq)
 
 -- |
@@ -87,6 +96,8 @@ data Atom = Integer Integer
           | Bool Bool
           | Nil deriving (Eq, Ord, Generic)
 
+-- |
+-- defines how to call elements in modules syntactically
 moduleSplitter :: Char
 moduleSplitter = '/'
 
@@ -104,7 +115,9 @@ instance NFData (WithMD a)
 instance Functor WithMD where
   fmap f (WithMD md x) = WithMD md $ f x
 
+{-
 -- |
 -- I'm sure I had a reason to do that........
 instance Eq a => Ord (WithMD a) where
   compare _ _ = EQ
+-}

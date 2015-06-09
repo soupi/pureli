@@ -90,10 +90,7 @@ duplicates :: Ord a => [a] -> [a]
 duplicates = map head . filter ((>1) . length) . group . sort
 
 -- |
--- strip from metadata
-stripMD :: WithMD a -> a
-stripMD (WithMD _ x) = x
-
+-- split arguments by element
 splitBy :: Eq a => a -> [a] -> [[a]]
 splitBy v vs = map reverse $ go [] vs
   where go xs [] = [xs]
@@ -102,6 +99,8 @@ splitBy v vs = map reverse $ go [] vs
           | otherwise = go (y:xs) ys
 
 
+-- |
+-- check if there is at most one &rest argument and the end of a list of arguments
 validArgs :: [String] -> (Bool, Maybe String)
 validArgs [] = (True, Nothing)
 validArgs (x:xs) = case x of
@@ -109,6 +108,13 @@ validArgs (x:xs) = case x of
   _ -> validArgs xs
 
 
+----------------
+-- Formatting
+---------------
+
+
+-- |
+-- list all modules
 listMods :: Int -> Module -> [String]
 listMods n modul =
   let m  = getModName modul

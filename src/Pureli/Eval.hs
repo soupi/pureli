@@ -2,6 +2,8 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE FlexibleInstances #-}
 
+-- |
+-- This module will interpret and run an expression or program in the language
 module Pureli.Eval (initEvalState, addToEnv, addImport, replModule, evalExpr, evalModule) where
 
 import Control.Monad (liftM)

@@ -1,5 +1,8 @@
+
 {-# LANGUAGE LambdaCase #-}
 
+-- |
+-- A parser for the language
 module Pureli.Parser (parseExpr, parseFile, parseReqDefExp, getMDSource) where
 
 import Control.Applicative (pure, (<$>))
@@ -10,7 +13,7 @@ import Text.ParserCombinators.Parsec ((<|>))
 import qualified Text.Parsec as P
 import qualified Text.Parsec.String as P (Parser)
 
-import Pureli.Utils (duplicates, stripMD)
+import Pureli.Utils (duplicates)
 import Pureli.AST
 import Pureli.Printer()
 import qualified Pureli.Lexer as L

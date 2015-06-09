@@ -2,7 +2,7 @@
 {-# LANGUAGE LambdaCase #-}
 
 -- |
--- repl module
+-- read-evaluate-print-loop module
 module Pureli.Repl (runRepl) where
 
 import qualified System.Console.Haskeline as HL

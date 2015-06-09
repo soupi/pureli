@@ -1,3 +1,6 @@
+
+-- |
+-- how to parse a number
 module Pureli.ParseNumber (parseNumber) where
 
 import Text.ParserCombinators.Parsec hiding (spaces)

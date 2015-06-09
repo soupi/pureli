@@ -88,9 +88,9 @@ showListElements = showListStrings . fmap show
 
 -- |convert a define to a string.
 showDefine :: Name -> (Name, WithMD Expr) -> String
-showDefine kind (name, WithMD _ (LIST (WithMD _ (ATOM (Symbol "lambda")) : WithMD _ (LIST args) : body : []))) =
+showDefine kind (name, WithMD _ (LIST [WithMD _ (ATOM (Symbol "lambda")), WithMD _ (LIST args), body])) =
   unlines ["(" ++ kind ++ " " ++ name ++ " [" ++ showListElements args ++ "]"
-          ,"  " ++ showExpr 1 (removeMD body) ++ ")"]
+          ,"  " ++ showExpr 1 (stripMD body) ++ ")"]
 showDefine kind (name, WithMD _ expr) =
   unlines ["(" ++ kind ++ " " ++ name
           ,showExpr 1 expr ++ ")"]
@@ -118,6 +118,8 @@ showModule modu = unlines
     ,defs (M.toList . getModEnv) "define"]
   where defs f k = unlines $ fmap (showDefine k) (f modu)
 
+-- |
+-- convert a data module to a string.
 showdataModule :: Module -> String
 showdataModule m =
   unlines $ fmap ($m)

@@ -1,3 +1,4 @@
+
 -- |a module to preprocess macros
 module Pureli.Preprocess (preprocess, preprocessModule) where
 
@@ -16,8 +17,7 @@ import Pureli.Utils
 import Pureli.AST
 import Pureli.Printer()
 
-
-import Debug.Trace
+--import Debug.Trace
 
 -- |evaluation type
 type Preprocess a = MT.ReaderT (Env, Module) (MT.ExceptT Error MT.Identity) (WithMD a)
