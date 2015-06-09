@@ -900,15 +900,16 @@ atomToDouble (Real d) = d
 atomToDouble (Integer i) = fromIntegral i
 atomToDouble x           = error $ "trying to cast an atom to a double. implementation error, should not happend: " ++ show x
 
+-- |an evaluation of an something in pure context
 pureEvaluation :: PureEval a -> Module -> Either Error a
 pureEvaluation go m =
   MT.runIdentity $ MT.runExceptT $ MT.runReaderT go (EvalState m pureContextBuiltins)
 
+-- |insert either to monadic context
 liftFromEither :: Monad m => Either Error a -> MEval m a
 liftFromEither = \case
   Left err -> lift $ MT.throwE err
   Right rs -> return rs
-
 
 -- |try to evaluate expression to a number
 evalToNumber :: Module -> WithMD Expr -> WithMD Expr -> Either Error Atom
