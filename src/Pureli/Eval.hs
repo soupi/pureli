@@ -128,8 +128,18 @@ pureEval modul exprWithMD@(WithMD md expr) =
 
 
 -- |evaluate an expression in a module in IO context
-evalExpr :: Module -> WithMD Expr -> IO (Either Error (WithMD Expr))
-evalExpr modul expr = MT.runExceptT $ MT.runReaderT (eval expr) $ EvalState modul builtinsIO
+evalExpr :: Module -> (Name, WithMD Expr) -> IO (Either Error (WithMD Expr))
+evalExpr modul (name, expr) = do
+  res <- MT.runExceptT $ MT.runReaderT (eval expr) $ EvalState modul builtinsIO
+  return $ case res of
+    Left err -> Left err
+    Right (WithMD md (PROCEDURE (Closure closure_env fun))) ->
+      Right (WithMD md (PROCEDURE (Closure (addToClosureEnv (name, expr) closure_env) fun)))
+    Right result -> Right result
+
+addToClosureEnv :: (Name, WithMD Expr) -> Module -> Module
+addToClosureEnv (name, expr) closure_env =
+  closure_env { getModEnv = M.fromList [(name, expr)] `M.union` getModEnv closure_env }
 
 -- |evaluate an expression in any context
 -- PROCEDURE and QUOTE are returned without evaluation

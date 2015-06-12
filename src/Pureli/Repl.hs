@@ -31,11 +31,11 @@ runExpr modul content =
     case parseReqDefExp "REPL" content of
       Left  err -> HL.outputStrLn err >> return modul
       Right (Exp res) ->
-        lift $ (evalExpr modul res >>= either print print) >> return modul
+        lift $ (evalExpr modul ("", res) >>= either print print) >> return modul
       Right (Req res) ->
         lift (requireToMod res) >>= either (\err -> HL.outputStrLn (show err) >> return modul) (return . flip addImport modul)
       Right (Def res) ->
-        lift (evalExpr modul (snd res)) >>= \case
+        lift (evalExpr modul res) >>= \case
           Left  err  -> HL.outputStrLn (show err) >> return modul
           Right expr -> return $ addToEnv (fst res, expr) modul
 
@@ -71,7 +71,7 @@ multiLineExpr = go []
 -- a welcome message to be shown when starting the REPL
 welcomeMsg :: String
 welcomeMsg = unlines ["REPL for Pureli, a purely functional, dynamically typed,"
-                     ,"Lisp-like programming language version 0.1.0"
+                     ,"Lisp-like programming language version 0.2.1"
                      ,"Write an expression and press enter to evaluate, :help for help or :q to quit"]
 
 -- |
