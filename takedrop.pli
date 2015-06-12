@@ -63,8 +63,49 @@
 (define lcm (a b)
   (/ (* (abs a) (abs b)) (gcd a b)))
 
+(define not [test]
+  (if test #f #t))
+
+(define filter [f xs]
+  (if (not (list? xs))
+    (error "cannot filter on a non list type")
+    (if (empty? xs)
+      xs
+      (if (f (car xs)) (cons (car xs) (filter f (cdr xs))) (filter f (cdr xs))))))
+
+(define fold [f xs init]
+  (if (not (list? xs))
+    (error "cannot fold on a non list type")
+    (if (empty? xs)
+      init
+      (f (car xs) (fold f (cdr xs) init)))))
+
+(define index
+    (lambda (lst place)
+      (if (nil? lst)
+          ()
+          (if (> place (length lst))
+          (error "place is out of bound for list given")
+          (if (= place 0)
+          (car lst)
+          (index (cdr lst) (- place 1)))))))
+
+(define revloop (lst acc)
+  (if (empty? lst)
+      acc
+      (revloop (cdr lst) (++ (car lst)  acc))
+  )
+)
+
+(define reverse lst
+  (revloop lst (list)))
+
 (define main
   (do!
+    [print! (reverse (list 1 2 3 4 5))]
+    [print! (index (list 1 2 3 4) 3)]
+    [print! (filter integer? (list 1 2 3 1.3))]
+    [print! (fold + (list 1 2 3 4) 0)]
     [print! (max 1 2 3 -1)]
     [print! (gcd 1024 516)]
     [print! (lcm 12 18)]
