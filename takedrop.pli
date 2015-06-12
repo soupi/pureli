@@ -92,15 +92,10 @@
           (car lst)
           (index (cdr lst) (- place 1))))))))
 
-(define revloop (lst acc)
-  (if (empty? lst)
-      acc
-      (revloop (cdr lst) (++ (car lst)  acc))
-  )
-)
-
-(define reverse lst
-  (revloop lst (list)))
+(define reverse (xs)
+  (if (empty? xs)
+    xs
+    (++ (reverse (cdr xs)) (list(car xs)))))
 
 (define main
   (do!
