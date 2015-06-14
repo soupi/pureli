@@ -358,6 +358,10 @@ pureBuiltins =
     ,(">",      evalCompare (compareExprs (>)))
     ,("<=",     evalCompare (compareExprs (<=)))
     ,(">=",     evalCompare (compareExprs (>=)))
+    ,("str->words", evalStringSplit (strToList words))
+    ,("str->lines", evalStringSplit (strToList lines))
+    ,("words->str", evalStringMerge (listToStr unwords))
+    ,("lines->str", evalStringMerge (listToStr unlines))
     ,("length", evalLength)
     ,("slice", evalSlice)
     ,("show", evalShow)
@@ -371,7 +375,7 @@ pureBuiltins =
     ,("quote",  evalQuote)
     ,("mquote", evalQuote)
     ,("eval", evalEval)
-    ,("read-string", evalReadString)
+    ,("read-str", evalReadString)
     ,("let", evalLet)
     ,("letrec", evalLetrec)]
 
@@ -856,6 +860,36 @@ evalLength rootExpr@(WithMD exprMD _) operands =
         Right str -> lift $ return $ WithMD exprMD $ ATOM $ Integer $ fromIntegral (length str)
         Left e    -> lift $ MT.throwE e
     vs -> throwErr (Just rootExpr) $ " arity problem: expecting 1 argument, got " ++ show (length vs)
+
+-- |eval a 'words' expression on a string
+evalStringSplit :: Monad m => (Metadata -> String -> Expr) -> WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
+evalStringSplit f rootExpr@(WithMD exprMD _) operands =
+  case operands of
+    [x] -> evalToString rootExpr x >>= \case
+      Right str -> lift $ return $ WithMD exprMD $ f exprMD str
+      Left e    -> lift $ MT.throwE e
+    vs -> throwErr (Just rootExpr) $ " arity problem: expecting 1 argument, got " ++ show (length vs)
+
+
+strToList :: (String -> [String]) -> Metadata -> String -> Expr
+strToList f exprMD str = QUOTE $ WithMD exprMD $ LIST $ map (WithMD exprMD . ATOM . String) (f str)
+
+listToStr:: ([String] -> String) -> [String] -> Expr
+listToStr f ls = ATOM $ String (f ls)
+
+-- |eval a 'words' or 'lines' expression on a string
+evalStringMerge :: Monad m => ([String] -> Expr) -> WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
+evalStringMerge f rootExpr@(WithMD exprMD _) operands = do
+  modul <- liftM getModule ask
+  case operands of
+    [x] -> evalToList rootExpr x >>= \case
+      Left  e  -> lift $ MT.throwE e
+      Right ls -> case seqParMap (pureEvalToString modul rootExpr) ls of
+        Right sls -> lift $ return $ WithMD exprMD $ f sls
+        Left e    -> lift $ MT.throwE e
+    vs -> throwErr (Just rootExpr) $ " arity problem: expecting 1 argument, got " ++ show (length vs)
+
+
 
 
 

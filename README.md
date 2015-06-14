@@ -19,11 +19,13 @@ Built-in Procedures
 - Arithmetic operations (`+`, `-`, `*`, `/`, `mod`)
 - Tests (`zero?`, `empty?`, `nil?`, `number?`, `integer?`, `real?`, `list?`. `string?`, `procedure?`, `symbol?`)
 - Comparison (`==`, `<>`, `>`, `<`, `>=`, `<=`)
-- List operations (`list`, `car`, `cdr`, `++`, `slice`, `length`)
+- List operations (`list`, `car`, `cdr`)
+- List and String operations (`++`, `slice`, `length`)
+- List<->String operations (`str->lines`, `str->words`, `lines->str`, `words->str`)
 - `show` expression
 - `if` expression
 - `let` and `letrec`
-- `quote`, `mquote`, `eval` and `read-string`
+- `quote`, `mquote`, `eval` and `read-str`
 - `error`, `try` and `trace`
 - `lambda` expression
 
