@@ -18,21 +18,22 @@ import Pureli.Repl
 -- interprets a file or runs the REPL depending on the number of arguments
 run :: [String] -> IO ()
 run = \case
-    []         -> runRepl -- |^run repl
-    ["--help"] -> putStrLn helpMsg -- |^print help message
-    [file]     ->
+    []          -> runRepl -- |^run repl
+    ["--help"]  -> putStrLn helpMsg -- |^print help message
+    (file:argv) -> do
+      let args = WithMD emptyMeta $ QUOTE $ WithMD emptyMeta $ LIST $ fmap (WithMD emptyMeta . ATOM . String) argv
       let (takeDirectory, takeFileName) = systemFuncs
-      in setCurrentDirectory (takeDirectory file) >> runExceptT (loadModule (takeFileName file) "main" >>= evalModule) >>= \case -- |^interpret file
+      setCurrentDirectory (takeDirectory file)
+      runExceptT (loadModule (takeFileName file) "main" >>= evalModule . addToEnv ("argv", args)) >>= \case -- |^interpret file
         Left err                -> print err
         Right (WithMD _ result) -> print result
-    _      -> putStrLn "Error. too many arguments"
 
 
 helpMsg :: String
 helpMsg = unlines (msg ++ displayCommands dashOpener usageMsg)
   where msg =
           [""
-          ,"Pureli interpreter version 0.2.2"
+          ,"Pureli interpreter version 0.2.3"
           ,""
           ,"Usage:"
           ]

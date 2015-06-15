@@ -7,7 +7,6 @@
 (define compose (f g)
   (lambda (x) (f (g x))))
 
-
 (defmacro bind!
   ((m f)
     (do!
@@ -17,15 +16,21 @@
 (defmacro cond
    [() (error "*** error: cond - non-exhuastive patterns")]
    [(clause1 &rest)
-     (if (eval (car clause1))
-         (eval (car (cdr clause1)))
+     (if (eval (car 'clause1))
+         (eval (car (cdr 'clause1)))
          (cond &rest))])
 
+(define apply (f xs)
+  (eval (++ '(f) xs)))
+
+(defmacro applyn ((f xs)
+  (eval (++ f xs))))
 
 ;; ----------
 ;; list functions
 (module list)
 
+(require std)
 (require bool)
 
 (define elem [x xs]
@@ -40,19 +45,59 @@
     (++ (list x) xs)
     (++ (list x) (list xs))))
 
-(define map [f xs]
+; need to solve hygiene for recursive macros
+(defmacro cond
+   [() (error "*** error: cond - non-exhuastive patterns")]
+   [(clause1 &rest)
+     (if (eval (car 'clause1))
+         (eval (car (cdr 'clause1)))
+         (cond &rest))])
+
+
+
+
+(define fmap [f xs]
   (if (bool/not (list? xs))
     (error "cannot map on a non list type")
     (if (empty? xs)
       xs
-      (cons (f (car xs)) (map f (cdr xs))))))
+      (cons (f (car xs)) (fmap f (cdr xs))))))
+
+(define map [f &xs]
+  (cond
+    ((empty? xs)
+     (lambda params
+       (std/applyn '(map f) params)))
+    ((std/apply bool/or (fmap empty? xs))
+     (list))
+    (#t
+     (cons (std/apply f (fmap car xs)) (std/applyn '(map f) (fmap cdr xs))))))
+
 
 ;; ----------
 ;; bool functions
 (module bool)
 
+(require std)
+
 (define not [test]
   (if test #f #t))
+
+(define and params
+  (if (empty? params)
+      #t
+      (if (car params)
+          (std/apply and (cdr params))
+          #f)))
+
+(define or params
+  (if (empty? params)
+      #f
+      (if (car params)
+          #t
+          (std/apply or (cdr params)))))
+
+
 
 ;; ----------
 ;; tests

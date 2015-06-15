@@ -6,7 +6,7 @@
 module Pureli.AST where
 
 import qualified Data.Map    as M
-import qualified Text.Parsec as P  (SourcePos)
+import qualified Text.Parsec.Pos as P (SourcePos, newPos)
 import System.IO             as IO (FilePath)
 import Control.DeepSeq             (NFData)
 import GHC.Generics                (Generic)
@@ -51,6 +51,12 @@ type Env = M.Map Name (WithMD Expr)
 -- |
 -- metadata, current holds the position in the interpreted file
 type Metadata = P.SourcePos
+
+
+-- |
+-- creates an empty metadata
+emptyMeta :: Metadata
+emptyMeta = P.newPos "Main" 0 0
 
 -- |
 -- holds metadata on the type

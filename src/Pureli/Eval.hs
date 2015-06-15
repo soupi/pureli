@@ -675,7 +675,8 @@ isNilTest _          = False
 -- |test empty?
 isEmptyTest :: Expr -> Bool
 isEmptyTest (QUOTE (WithMD _ (LIST []))) = True
-isEmptyTest _          = False
+isEmptyTest (QUOTE (WithMD _ (LIST _)))  = False
+isEmptyTest _ = False
 
 -- |test integer?
 isIntegerTest :: Expr -> Bool
