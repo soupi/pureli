@@ -99,8 +99,45 @@
     xs
     (++ (reverse (cdr xs)) (list(car xs)))))
 
+(define flatten l
+  (cond
+    ((nil? l) ())
+    ((empty? (cdr l)) (++ (flatten (take l 1)) (flatten (drop l 1))))
+    (#t (list l))))
+
+
+
+(define lookup (thing alist)
+   (if (empty? alist)
+       (list)
+       (if (= (car (car alist)) thing)
+           (cdr (car alist))
+           (lookup thing (cdr alist)))))
+
+(define insert (thing alist)
+  (if (empty? alist)
+      (list thing)
+      (cons thing (remove (car thing) alist))))
+
+
+(define remove (thing alist)
+  (if (empty? alist)
+      alist
+      (if (= (car (car alist)) thing)
+          (cdr alist)
+          (cons (car alist) (remove thing (cdr alist))))))
+
 (define main
   (do!
+    [let! x (pure (list (list "a" 5) (list "b" 6)))]
+    [print! x]
+    [print! (lookup "c" x)]
+    [let! y (pure (insert (list "c" 7) x))]
+    [let! z (pure (insert (list "c" 8) x))]
+    [print! y]
+    [print! z]
+    [print! (lookup "c" y)]
+    [print! (remove "c" y)]
     [print! (reverse (list 1 2 3 4 5))]
     [print! (index (list 1 2 3 4) 1)]
     [print! (filter integer? (list 1 2 3 1.3))]
