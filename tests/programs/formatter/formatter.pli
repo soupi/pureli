@@ -1,0 +1,14 @@
+(module main)
+
+(require "stdlib/std.pli" list (map))
+
+(define main
+  (if (= (length argv) 2)
+    (run (car argv) (car (cdr argv)))
+    (print! "usage: pureli formatter.pli <input-file> <output-file>")))
+
+(define run (input-file output-file)
+  (do!
+    (let! input-text (read-file! input-file))
+    (let ([output-text (lines->str (list/map words->str (list/map str->words (str->lines input-text))))])
+      (print-file! output-file output-text))))

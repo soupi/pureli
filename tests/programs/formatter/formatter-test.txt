@@ -1,0 +1,11 @@
+Hello           all,
+
+    This is a    formatting test
+
+
+
+
+
+
+
+    Trying to                                                        write long    spaces

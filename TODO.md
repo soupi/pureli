@@ -12,7 +12,7 @@ TODO
 ----
 
 - **Standard library**
--- **Documentation**
+- **Documentation**
 - **Runtime of parallel execuation data processing**
 - Test Test Test
 - Abstract away +RTS and such

@@ -1,5 +1,6 @@
 
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 -- |
 -- Create a module before evaluation
@@ -21,11 +22,15 @@ import Pureli.Parser
 import Pureli.Printer()
 import Pureli.Preprocess
 
+import Paths_Pureli (getDataFileName)
+
 -- |
 -- read module definitions from file
 readModules :: (MT.MonadTrans t, Monad (t IO)) =>FilePath -> MT.ExceptT Error (t IO) [WithMD ModuleDef]
 readModules filepath = do
-  result <- MT.lift $ MT.lift ((Right <$> readFile filepath) `catch` (\e -> return $ Left $ show (e :: IOException)))
+  result <- MT.lift $ MT.lift ((Right <$> readFile filepath)
+              `catch` (\e -> (Right <$> (readFile =<< getDataFileName filepath))
+                `catch` (\(_ :: IOException) -> return $ Left $ show (e :: IOException))))
   case result of
     Left _ ->
       MT.throwE (Error Nothing $ "Couldn't find file " ++ filepath)

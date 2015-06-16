@@ -5,8 +5,9 @@
 -- execution module
 module Pureli.Run (run) where
 
+import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Except
-import System.Directory (setCurrentDirectory)
+import System.Directory (setCurrentDirectory, getCurrentDirectory)
 
 import Pureli.Utils (systemFuncs, displayCommands, dashOpener)
 import Pureli.AST
@@ -23,10 +24,15 @@ run = \case
     (file:argv) -> do
       let args = WithMD emptyMeta $ QUOTE $ WithMD emptyMeta $ LIST $ fmap (WithMD emptyMeta . ATOM . String) argv
       let (takeDirectory, takeFileName) = systemFuncs
+      currDir <- getCurrentDirectory
       setCurrentDirectory (takeDirectory file)
-      runExceptT (loadModule (takeFileName file) "main" >>= evalModule . addToEnv ("argv", args)) >>= \case -- |^interpret file
+      result <- runExceptT $ do
+        modul <- loadModule (takeFileName file) "main"
+        lift $ setCurrentDirectory currDir
+        evalModule (addToEnv ("argv", args) modul)
+      case result of
         Left err                -> print err
-        Right (WithMD _ result) -> print result
+        Right (WithMD _ res) -> print res
 
 
 helpMsg :: String

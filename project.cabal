@@ -7,7 +7,7 @@ name:                Pureli
 -- PVP summary:      +-+------- breaking API changes
 --                   | | +----- non-breaking API additions
 --                   | | | +--- code changes with no API change
-version:             0.2.3
+version:             0.3.0
 synopsis:            A purely functional, dynamically typed, parallel interpreted, lisp-like programming language
 license:             BSD3
 license-file:        LICENSE
@@ -21,6 +21,10 @@ build-type:          Simple
 -- README.
 extra-source-files:
   README.md
+
+data-files:
+  stdlib/*.pli
+
 
 cabal-version:       >=1.10
 
@@ -39,8 +43,12 @@ executable pureli
     ,filepath
     ,haskeline
 
+  other-modules:
+    Paths_Pureli
+
   hs-source-dirs:      src
   default-language:    Haskell2010
+
 
   ghc-options: -threaded -Wall -fwarn-tabs -funbox-strict-fields -O2
                -rtsopts -eventlog -fno-warn-orphans -fno-warn-unused-do-bind
