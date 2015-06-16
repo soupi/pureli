@@ -2,6 +2,7 @@
 -- |a module to preprocess macros
 module Pureli.Preprocess (preprocess, preprocessModule) where
 
+import Control.Monad (liftM)
 import Control.Applicative ((<$>))
 import Prelude hiding (mapM)
 import Data.Traversable (mapM)
@@ -23,10 +24,10 @@ import Pureli.Printer()
 type Preprocess a = MT.ReaderT (Env, Module) (MT.ExceptT Error MT.Identity) (WithMD a)
 
 getEnv :: Monad m => MT.ReaderT (Env, Module) m Env
-getEnv = ask >>= return . fst
+getEnv = liftM fst ask
 
 getMod :: Monad m => MT.ReaderT (Env, Module) m Module
-getMod = ask >>= return . snd
+getMod = liftM snd ask
 
 wrapInClosureCall :: WithMD Expr -> Preprocess Expr
 wrapInClosureCall (WithMD md expr) = do
@@ -39,7 +40,7 @@ preprocessModule :: Module -> MT.ExceptT Error MT.Identity Module
 preprocessModule modul = do
   let env    = getModMacros modul
       menv   = F.concatMap (\m -> fmap (\(n,e) -> (getModName m ++ "/" ++ n, e)) (M.toList $ getModExportedMacros m)) (getModImports modul)
-  let macros = M.toList env ++ menv
+      macros = M.toList env ++ menv
   definitions <- mapM (mapM (\expr -> MT.runReaderT (preprocess expr) (M.fromList macros, modul))) $ M.toList (getModEnv modul)
   return $ modul { getModEnv = M.fromList definitions, getModMacros = M.fromList macros }
 

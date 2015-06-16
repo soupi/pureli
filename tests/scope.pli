@@ -1,0 +1,10 @@
+(module main)
+
+(define tmp #t)
+
+(define f ()
+  tmp)
+
+(define main
+  (let ((tmp #f))
+    (print! (f))))

@@ -110,22 +110,29 @@ emptyEnv = M.fromList []
 
 -- |evaluate a program executable from environment by looking up main.
 evalModule :: Module -> MT.ExceptT Error IO (WithMD Expr)
-evalModule modul =
-  case M.lookup "main" (getModEnv modul) of
-    Nothing   -> throwE $ Error Nothing $ "No main function in program \n*** " ++ show (map fst (M.toList (getModEnv modul)))
-    Just expr@(WithMD md _) -> MT.runReaderT (eval $ WithMD md $ LIST [WithMD md $ ATOM $ Symbol "do!", expr]) (EvalState modul builtinsIO)
+evalModule m =
+  let modul = m { getModEnv = fmap (wrapInEnv modul) (getModEnv m) }
+  in
+    case M.lookup "main" (getModEnv modul) of
+      Nothing   -> throwE $ Error Nothing $ "No main function in program \n*** " ++ show (map fst (M.toList (getModEnv modul)))
+      Just expr@(WithMD md _) -> MT.runReaderT (eval $ WithMD md $ LIST [WithMD md $ ATOM $ Symbol "do!", expr]) (EvalState modul builtinsIO)
 
+
+-- |
+-- takes an expression and creates a closure from it
+wrapInEnv :: Module -> WithMD Expr -> WithMD Expr
+wrapInEnv m e@(WithMD md _) = WithMD md $ ENVEXPR m e
 
 -- |evaluate an expression in pure context
 pureEval :: Module -> WithMD Expr -> Either Error (WithMD Expr)
 pureEval modul exprWithMD@(WithMD md expr) =
-  flip pureEvaluation modul $
+  pureEvaluation `uncurry`
     case expr of
-      ATOM a      -> evalAtom exprWithMD a
-      PROCEDURE p -> return $ WithMD md $ PROCEDURE p
-      QUOTE l     -> return $ WithMD md $ QUOTE l
-      LIST ls     -> evalOp exprWithMD ls
-
+      ATOM a      -> (modul, evalAtom exprWithMD a)
+      PROCEDURE p -> (modul, return $ WithMD md $ PROCEDURE p)
+      QUOTE l     -> (modul, return $ WithMD md $ QUOTE l)
+      LIST ls     -> (modul, evalOp exprWithMD ls)
+      ENVEXPR m e -> (m, return e)
 
 -- |evaluate an expression in a module in IO context
 evalExpr :: Module -> (Name, WithMD Expr) -> IO (Either Error (WithMD Expr))
@@ -150,6 +157,8 @@ eval exprWithMD@(WithMD md expr) =
     PROCEDURE p -> return $ WithMD md $ PROCEDURE p
     QUOTE l     -> return $ WithMD md $ QUOTE l
     LIST ls     -> evalOp exprWithMD ls
+    ENVEXPR m e -> MT.withReaderT (changeModule m) (eval e)
+
 
 -- |get the environment from inside of a monad
 getEnvironment :: Monad m => MEval m (Module, Env, Builtins m)
@@ -948,8 +957,8 @@ atomToDouble (Integer i) = fromIntegral i
 atomToDouble x           = error $ "trying to cast an atom to a double. implementation error, should not happend: " ++ show x
 
 -- |an evaluation of an something in pure context
-pureEvaluation :: PureEval a -> Module -> Either Error a
-pureEvaluation go m =
+pureEvaluation :: Module -> PureEval a -> Either Error a
+pureEvaluation m go =
   MT.runIdentity $ MT.runExceptT $ MT.runReaderT go (EvalState m pureContextBuiltins)
 
 -- |insert either to monadic context
