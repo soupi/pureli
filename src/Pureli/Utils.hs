@@ -108,6 +108,11 @@ validArgs (x:xs) = case x of
   _ -> validArgs xs
 
 
+-- |
+-- takes an expression and creates a closure from it
+wrapInEnv :: Module -> WithMD Expr -> WithMD Expr
+wrapInEnv m e@(WithMD md _) = WithMD md $ ENVEXPR m e
+
 ----------------
 -- Formatting
 ---------------
@@ -136,3 +141,18 @@ displayCommand opener paddCmd (cmd, desc) = opener ++ paddCmd cmd ++ desc
 dashOpener, spaceOpener :: String
 dashOpener  = "  - "
 spaceOpener = "    "
+
+
+---------------------
+-- ast combinators
+---------------------
+
+wrapInStoreEnv :: WithMD Expr -> WithMD Expr
+wrapInStoreEnv (WithMD md (LIST xs)) = WithMD md (LIST $ fmap wrapInStoreEnv xs)
+wrapInStoreEnv (WithMD _ (QUOTE (WithMD md (LIST operands)))) = WithMD md $ QUOTE $ WithMD md (LIST $ fmap wrapInStoreEnv operands)
+wrapInStoreEnv e@(WithMD _ (STOREENV _)) = e 
+wrapInStoreEnv e@(WithMD md _) = fmap (STOREENV . WithMD md) e
+
+wrapInList :: Metadata -> [WithMD Expr] -> WithMD Expr
+wrapInList md es = WithMD md $ QUOTE $ WithMD md $ LIST es
+

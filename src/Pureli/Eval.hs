@@ -118,11 +118,6 @@ evalModule m =
       Just expr@(WithMD md _) -> MT.runReaderT (eval $ WithMD md $ LIST [WithMD md $ ATOM $ Symbol "do!", expr]) (EvalState modul builtinsIO)
 
 
--- |
--- takes an expression and creates a closure from it
-wrapInEnv :: Module -> WithMD Expr -> WithMD Expr
-wrapInEnv m e@(WithMD md _) = WithMD md $ ENVEXPR m e
-
 -- |evaluate an expression in pure context
 pureEval :: Module -> WithMD Expr -> Either Error (WithMD Expr)
 pureEval modul exprWithMD@(WithMD md expr) =
@@ -132,7 +127,25 @@ pureEval modul exprWithMD@(WithMD md expr) =
       PROCEDURE p -> (modul, return $ WithMD md $ PROCEDURE p)
       QUOTE l     -> (modul, return $ WithMD md $ QUOTE l)
       LIST ls     -> (modul, evalOp exprWithMD ls)
-      ENVEXPR m e -> (m, return e)
+      ENVEXPR m e -> (m, MT.withReaderT (changeModule m) (eval e))
+      STOREENV e  -> (modul, return $ WithMD md $ trace "--store--" $ ENVEXPR modul e)
+
+-- |evaluate an expression in pure context
+removeENVEXPR :: WithMD Expr -> WithMD Expr
+removeENVEXPR (WithMD md (ENVEXPR m e)) = e
+removeENVEXPR e = e
+
+
+
+-- |evaluate an expression in pure context and extend environment
+pureEvalExtend :: Module -> [(Name, WithMD Expr)] -> WithMD Expr -> Either Error (WithMD Expr)
+pureEvalExtend modul evaluated_binds exprWithMD@(WithMD _ expr) =
+  case expr of
+    ENVEXPR m e ->
+      let m' = m { getModEnv = M.fromList evaluated_binds `M.union` getModEnv m }
+      in pureEvaluation m' $ MT.withReaderT (changeModule m') (eval e)
+    _ -> pureEval (modul { getModEnv = M.fromList evaluated_binds `M.union` getModEnv modul }) exprWithMD
+
 
 -- |evaluate an expression in a module in IO context
 evalExpr :: Module -> (Name, WithMD Expr) -> IO (Either Error (WithMD Expr))
@@ -151,13 +164,27 @@ addToClosureEnv (name, expr) closure_env =
 -- |evaluate an expression in any context
 -- PROCEDURE and QUOTE are returned without evaluation
 eval :: Monad m => WithMD Expr -> Evaluation m Expr
-eval exprWithMD@(WithMD md expr) =
+eval exprWithMD@(WithMD md expr) = do
+  traceM $ "#*eval*# " ++ show expr
+  modul <- liftM getModule ask
   case expr of
     ATOM a      -> evalAtom exprWithMD a
     PROCEDURE p -> return $ WithMD md $ PROCEDURE p
     QUOTE l     -> return $ WithMD md $ QUOTE l
     LIST ls     -> evalOp exprWithMD ls
     ENVEXPR m e -> MT.withReaderT (changeModule m) (eval e)
+    STOREENV e  -> return $ WithMD md $ ENVEXPR modul e
+
+-- |evaluate an expression in pure context and extend environment
+evalExtend :: Monad m => [(Name, WithMD Expr)] -> WithMD Expr -> Evaluation m Expr
+evalExtend evaluated_binds exprWithMD@(WithMD _ expr) = do
+  modul <- liftM getModule ask
+  case expr of
+    ENVEXPR m e ->
+      let m' = m { getModEnv = M.fromList evaluated_binds `M.union` getModEnv m }
+      in MT.withReaderT (changeModule m') (eval e)
+    _ -> MT.withReaderT (changeModule (modul { getModEnv = M.fromList evaluated_binds `M.union` getModEnv modul })) $ eval exprWithMD
+
 
 
 -- |get the environment from inside of a monad
@@ -186,6 +213,26 @@ evalAtom rootExpr@(WithMD md _) atom = do
           Just _  -> return $ WithMD md $ ATOM $ Symbol var -- |^this will be handled later
     other -> return $ WithMD md (ATOM other)
 
+-- |evaluate a primitive expression
+-- a Symbol is searched in environment and is evaluated
+-- any other Atom is simply returned
+evalAtomOrSymbol :: Monad m => WithMD Expr -> Atom -> MEval m (Module, WithMD Expr)
+evalAtomOrSymbol rootExpr@(WithMD md _) atom = do
+  (modul, env, builtins) <- getEnvironment
+  case atom of
+    Symbol var -> case M.lookup var env of
+      Just v  -> return (modul, v)
+      Nothing -> case lookupInModule var modul of
+        Just (v, vMod) -> return (vMod, v)
+        Nothing -> case M.lookup var builtins of
+          Nothing -> throwErr (Just rootExpr) $ case M.lookup var ioBuiltins of
+            Just _  -> "Cannot run IO action '" ++ var ++ "' in pure context."
+            Nothing -> "Could not find " ++ show var ++ " in environment: " ++ show (fst <$> M.toList env)
+          Just _  -> return (modul, WithMD md $ ATOM $ Symbol var) -- |^this will be handled later
+    other -> return (modul, WithMD md $ ATOM other)
+
+
+
 -- |evaluate a function application
 evalOp :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
 evalOp (WithMD md _) [] = return $ WithMD md $ ATOM Nil
@@ -208,10 +255,12 @@ evalOp exprWithMD (WithMD md operator:operands) = do
 evalProcedure :: Monad m => [WithMD Expr] -> WithMD Expr -> Evaluation m Expr
 evalProcedure operands (WithMD md (PROCEDURE (Closure closure_env (WithMD _ (Fun (FunArgsList args) body))))) = do
   -- |evaluate arguments
-  evaluated_args <- mapM eval operands
+  (argsName, evaluated_args) <- case args of
+                                  ('~':n) -> return . (,) n    =<< mapM eval (fmap wrapInStoreEnv operands)
+                                  _       -> return . (,) args =<< mapM eval operands
   let argsAsList = WithMD md $ QUOTE $ WithMD md $ LIST evaluated_args
   -- |extend environment with arguments
-  let extended_env = M.fromList [(args, argsAsList)] `M.union` getModEnv closure_env
+  let extended_env = M.fromList [(argsName, argsAsList)] `M.union` getModEnv closure_env
   -- |evaluate the function's body in the extended environment
   MT.withReaderT (changeEnv extended_env . changeModule closure_env) (eval (WithMD md body))
 evalProcedure operands rootExpr@(WithMD md (PROCEDURE (Closure closure_env (WithMD _ (Fun (FunArgs args mrest) body))))) =
@@ -224,9 +273,10 @@ evalProcedure operands rootExpr@(WithMD md (PROCEDURE (Closure closure_env (With
           throwErr (Just rootExpr) $ " arity problem: expecting at least " ++ show args_length ++ " arguments, got " ++ show operands_length
         else do
           -- |evaluate arguments
-          evaluated_args <- mapM eval operands
+          let (argsZipped, remains) = zipWithRemains (,) args operands
+          evaluated_args <- determineEvaluation (rest, wrapInList md remains) >>= \x -> mapM determineEvaluation argsZipped >>= \y -> return (x:y)
           -- |extend environment with arguments
-          let extended_env = zipWithRest rest md args evaluated_args `M.union` getModEnv closure_env
+          let extended_env = M.fromList evaluated_args `M.union` getModEnv closure_env
           -- |evaluate the function's body in the extended environment
           MT.withReaderT (changeEnv extended_env . changeModule closure_env) (eval (WithMD md body))
       Nothing ->
@@ -235,13 +285,17 @@ evalProcedure operands rootExpr@(WithMD md (PROCEDURE (Closure closure_env (With
           throwErr (Just rootExpr) $ " arity problem: expecting " ++ show args_length ++ " arguments, got " ++ show operands_length
         else do
           -- |evaluate arguments
-          evaluated_args <- mapM eval operands
+          evaluated_args <- mapM determineEvaluation $ zip args operands
           -- |extend environment with arguments
-          let extended_env = M.fromList (zip args evaluated_args) `M.union` getModEnv closure_env
+          let extended_env = M.fromList evaluated_args `M.union` getModEnv closure_env
           -- |evaluate the function's body in the extended environment
           MT.withReaderT (changeEnv extended_env . changeModule closure_env) (eval (WithMD md body))
 -- not a procedure
 evalProcedure _ rootExpr = throwErr (Just rootExpr) "not a procedure"
+
+
+determineEvaluation (('~':n), operand) = return . (,) n =<< eval (wrapInStoreEnv operand)
+determineEvaluation (n, operand) = return . (,) n  =<< eval operand
 
 
 -- |calls a function in pure context
@@ -585,7 +639,7 @@ evalLet rootExpr = \case
   -- |check arity
   [binders, body] -> case binders of
     -- |evaluate binds and evaluate body in extended environment
-    WithMD _ (LIST binds) -> evalLetBinds binds >>= \evaluated_binds -> MT.withReaderT (updateEnv (M.fromList evaluated_binds `M.union`)) $ eval body
+    WithMD _ (LIST binds) -> evalLetBinds binds >>= \evaluated_binds -> evalExtend evaluated_binds body
       where evalLetBinds = \case
     -- |^evaluate binds
               [] -> lift $ return []
@@ -603,7 +657,7 @@ pureEvalLet rootExpr operands = do
     -- |check arity
     [binders, body] -> case binders of
       -- |evaluate binds and evaluate body in extended environment
-      WithMD _ (LIST binds) -> liftFromEither (seqParMap evalLetBind binds) >>= \evaluated_binds -> liftFromEither $ pureEval (modul { getModEnv = M.fromList evaluated_binds `M.union` getModEnv modul }) body
+      WithMD _ (LIST binds) -> liftFromEither (seqParMap evalLetBind binds) >>= \evaluated_binds -> liftFromEither $ pureEvalExtend modul evaluated_binds body
         where evalLetBind = \case
       -- |^evaluate binds
                 WithMD _ (LIST [WithMD _ (ATOM (Symbol name)), expr]) -> pureEval modul expr >>= \result -> return (name, result)
@@ -748,7 +802,7 @@ evalCar rootExpr = \case
   [expr] -> eval expr >>= \case
     WithMD _       (QUOTE (WithMD _ (LIST (x:_)))) -> return x
     WithMD _       (QUOTE (WithMD _ (LIST [])))    -> throwErr (Just rootExpr) "car on empty list"
-    _  -> throwErr (Just rootExpr)   " cannot car a non-list type"
+    x  -> throwErr (Just rootExpr) $ " cannot car a non-list type: " ++ show x
   xs   -> throwErr (Just rootExpr) $ "bad arity, expected 1 argument, got: " ++ show (length xs)
 
 -- |evaluate 'cdr' expression
@@ -763,6 +817,7 @@ evalCdr rootExpr = \case
 -- |evaluate a 'quote' expression. don't evaluate argument
 evalQuote :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
 evalQuote rootExpr@(WithMD exprMD _) = \case
+  [WithMD _ (LIST [WithMD _ (ATOM (Symbol "eval")), WithMD _ (ATOM s@(Symbol (';':_)))])] -> liftM (removeENVEXPR . snd) (evalAtomOrSymbol rootExpr s) >>= lift . return . WithMD exprMD . QUOTE
   [element] -> lift $ return $ WithMD exprMD $ QUOTE element
   xs        -> throwErr (Just rootExpr) $ "bad arity, expected 1 argument, got: " ++ show (length xs)
 
@@ -773,6 +828,7 @@ evalEval rootExpr = \case
     WithMD _ (QUOTE expr) -> eval expr
     expr                  -> eval expr >>= eval
   xs        ->throwErr (Just rootExpr) $ "bad arity, expected 1 argument, got: " ++ show (length xs)
+
 
 -- |converts a string to a quote
 evalReadString :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
