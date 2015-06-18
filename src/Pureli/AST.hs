@@ -92,6 +92,7 @@ data Expr = LIST [WithMD Expr]  -- ^a list of expressions
           | ATOM Atom           -- ^a primitive expression
           | PROCEDURE Closure   -- ^a procedure - a closure
           | ENVEXPR Module (WithMD Expr) -- ^an expression with an environment
+          | STOREENV (WithMD Expr) -- ^converts to ENVEXPR with current module
           deriving (Eq, Generic)
 
 -- |

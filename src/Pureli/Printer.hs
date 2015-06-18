@@ -60,7 +60,8 @@ showExpr indent expr = getIndent indent ++ case expr of
   QUOTE x     -> show x
   ATOM a      -> show a
   PROCEDURE x -> show x
-  ENVEXPR _ x -> show x
+  ENVEXPR m x -> "{;env " ++ show x ++ " | " ++ show (fmap fst $ M.toList $ getModEnv m) ++ "}"
+  STOREENV x  -> "(;storenv " ++ show x ++ ")"
 
 
 
