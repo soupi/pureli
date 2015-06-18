@@ -148,11 +148,14 @@ spaceOpener = "    "
 ---------------------
 
 wrapInStoreEnv :: WithMD Expr -> WithMD Expr
-wrapInStoreEnv (WithMD md (LIST xs)) = WithMD md (LIST $ fmap wrapInStoreEnv xs)
-wrapInStoreEnv (WithMD _ (QUOTE (WithMD md (LIST operands)))) = WithMD md $ QUOTE $ WithMD md (LIST $ fmap wrapInStoreEnv operands)
 wrapInStoreEnv e@(WithMD _ (STOREENV _)) = e 
 wrapInStoreEnv e@(WithMD md _) = fmap (STOREENV . WithMD md) e
 
 wrapInList :: Metadata -> [WithMD Expr] -> WithMD Expr
 wrapInList md es = WithMD md $ QUOTE $ WithMD md $ LIST es
+
+wrapInLet :: [(WithMD Expr, WithMD Expr)] -> WithMD Expr -> WithMD Expr
+wrapInLet binders body@(WithMD md _) =
+  wrapInList md [WithMD md $ ATOM $ Symbol "let", wrapInList md $ fmap (wrapInList md . (\(x,y) -> [x,y]) . fmap wrapInStoreEnv) binders, body]
+
 

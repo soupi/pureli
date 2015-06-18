@@ -146,7 +146,7 @@ funArgs = withMD $
 
 funArgList :: P.Parser Expr
 funArgList = do
-  args <- parensOrBrackets $ P.sepBy (withMD symbol) P.spaces
+  args <- parensOrBrackets $ P.sepBy (withMD argSymbol) P.spaces
   case validArgs args of
       Just _  -> P.parserFail "unexpected &. rest argument is not last."
       Nothing -> return $ (LIST . map (fmap ATOM)) args
@@ -157,6 +157,16 @@ validArgs (x:xs) = case x of
   WithMD md (Symbol ('&':_)) -> if null xs then Nothing else Just md
   _ -> validArgs xs
 
+argSymbol :: P.Parser Atom
+argSymbol = do
+  restTag <- P.optionMaybe (P.char '&')
+  lazyTag <- P.optionMaybe (P.char '~')
+  name <- L.identifier
+  return $ case (restTag, lazyTag) of
+    (Nothing, Nothing) -> Symbol name
+    (Just rt, Just lt) -> Symbol (rt:lt:name)
+    (Just rt, _      ) -> Symbol (rt:name)
+    (_      , Just lt) -> Symbol (lt:name)
 
 defines :: P.Parser ([(Name, WithMD Expr)], [(Name, WithMD Expr)])
 defines = fmap partitionEithers go

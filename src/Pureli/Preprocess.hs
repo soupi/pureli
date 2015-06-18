@@ -37,10 +37,6 @@ wrapInClosureCall expr@(WithMD md _) = do
   --return expr
   return $ WithMD md $ ENVEXPR modul expr
 
-wrapInLet :: [(WithMD Expr, WithMD Expr)] -> WithMD Expr -> WithMD Expr
-wrapInLet binders body@(WithMD md _) =
-  traceShowId $ listExpr md [WithMD md $ ATOM $ Symbol "let", listExpr md $ fmap (listExpr md . (\(x,y) -> [x,y]) . fmap wrapInStoreEnv) binders, body]
-
 wrapInEval :: WithMD Expr -> WithMD Expr
 wrapInEval e@(WithMD md _) = listExpr md [WithMD md $ ATOM $ Symbol "eval", e]
 
@@ -174,7 +170,7 @@ preprocessMacro macro rootExpr operands =
             let renamedNames = map (';':) argNames
             extendedEnv <- return . M.union (M.fromList (zip argNames (fmap wrapInEval argRenamed))) =<< getEnv
             -- |preprocess renamed macro body and replace argument names with argument expressions in it.
-            MT.withReaderT (const (extendedEnv, modul)) (preprocess afterRename) >>= wrapInClosureCall >>= return . (wrapInLet (zip argRenamed preprocessedArgs))
+            MT.withReaderT (const (extendedEnv, modul)) (preprocess afterRename) >>= wrapInClosureCall >>= return . (wrapInLet (zip argRenamed operands))
         (argNames, Just rarg) ->
           if length operands +1 < length args
           -- |try next macro

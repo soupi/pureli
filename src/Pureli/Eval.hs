@@ -173,7 +173,7 @@ eval exprWithMD@(WithMD md expr) = do
     QUOTE l     -> return $ WithMD md $ QUOTE l
     LIST ls     -> evalOp exprWithMD ls
     ENVEXPR m e -> MT.withReaderT (changeModule m) (eval e)
-    STOREENV e  -> return $ WithMD md $ ENVEXPR modul e
+    STOREENV e  -> return $ WithMD md $ trace "--store--" $ ENVEXPR modul e
 
 -- |evaluate an expression in pure context and extend environment
 evalExtend :: Monad m => [(Name, WithMD Expr)] -> WithMD Expr -> Evaluation m Expr
@@ -274,7 +274,7 @@ evalProcedure operands rootExpr@(WithMD md (PROCEDURE (Closure closure_env (With
         else do
           -- |evaluate arguments
           let (argsZipped, remains) = zipWithRemains (,) args operands
-          evaluated_args <- determineEvaluation (rest, wrapInList md remains) >>= \x -> mapM determineEvaluation argsZipped >>= \y -> return (x:y)
+          evaluated_args <- determineEvaluation eval (rest, wrapInList md remains) >>= \x -> mapM (determineEvaluation eval) argsZipped >>= \y -> return (x:y)
           -- |extend environment with arguments
           let extended_env = M.fromList evaluated_args `M.union` getModEnv closure_env
           -- |evaluate the function's body in the extended environment
@@ -285,7 +285,7 @@ evalProcedure operands rootExpr@(WithMD md (PROCEDURE (Closure closure_env (With
           throwErr (Just rootExpr) $ " arity problem: expecting " ++ show args_length ++ " arguments, got " ++ show operands_length
         else do
           -- |evaluate arguments
-          evaluated_args <- mapM determineEvaluation $ zip args operands
+          evaluated_args <- mapM (determineEvaluation eval) $ zip args operands
           -- |extend environment with arguments
           let extended_env = M.fromList evaluated_args `M.union` getModEnv closure_env
           -- |evaluate the function's body in the extended environment
@@ -294,8 +294,8 @@ evalProcedure operands rootExpr@(WithMD md (PROCEDURE (Closure closure_env (With
 evalProcedure _ rootExpr = throwErr (Just rootExpr) "not a procedure"
 
 
-determineEvaluation (('~':n), operand) = return . (,) n =<< eval (wrapInStoreEnv operand)
-determineEvaluation (n, operand) = return . (,) n  =<< eval operand
+determineEvaluation evalF (('~':n), operand) = return . (,) n =<< evalF (wrapInStoreEnv operand)
+determineEvaluation evalF (n, operand) = return . (,) n  =<< evalF operand
 
 
 -- |calls a function in pure context
@@ -303,10 +303,12 @@ pureEvalProcedure :: [WithMD Expr] -> WithMD Expr -> PureEval (WithMD Expr)
 pureEvalProcedure operands (WithMD md (PROCEDURE (Closure closure_env (WithMD _ (Fun (FunArgsList args) body))))) = do
   modul <- liftM getModule ask
   -- |evaluate arguments
-  evaluated_args <- liftFromEither $ seqParMap (pureEval modul) operands
+  (argsName, evaluated_args) <- liftFromEither $ case args of
+                                  ('~':n) -> return . (,) n    =<< seqParMap (pureEval modul) (fmap wrapInStoreEnv operands)
+                                  _       -> return . (,) args =<< seqParMap (pureEval modul) operands
   let argsAsList = WithMD md $ QUOTE $ WithMD md $ LIST evaluated_args
   -- |extend environment with arguments
-  let extended_env = M.fromList [(args, argsAsList)] `M.union` getModEnv closure_env
+  let extended_env = M.fromList [(argsName, argsAsList)] `M.union` getModEnv closure_env
   -- |evaluate the function's body in the extended environment
   MT.withReaderT (changeEnv extended_env . changeModule closure_env) (eval (WithMD md body))
 pureEvalProcedure operands rootExpr@(WithMD md (PROCEDURE (Closure closure_env (WithMD _ (Fun (FunArgs args mrest) body))))) =
@@ -320,9 +322,10 @@ pureEvalProcedure operands rootExpr@(WithMD md (PROCEDURE (Closure closure_env (
         else do
           modul <- liftM getModule ask
           -- |evaluate arguments
-          evaluated_args <- liftFromEither $ seqParMap (pureEval modul) operands
+          let (argsZipped, remains) = zipWithRemains (,) args operands
+          evaluated_args <- liftFromEither (determineEvaluation (pureEval modul) (rest, wrapInList md remains) >>= \x -> seqParMap (determineEvaluation (pureEval modul)) argsZipped >>= \y -> return (x:y))
           -- |extend environment with arguments
-          let extended_env = zipWithRest rest md args evaluated_args `M.union` getModEnv closure_env
+          let extended_env = M.fromList evaluated_args `M.union` getModEnv closure_env
           -- |evaluate the function's body in the extended environment
           MT.withReaderT (changeEnv extended_env . changeModule closure_env) (eval (WithMD md body))
       Nothing ->
@@ -332,9 +335,9 @@ pureEvalProcedure operands rootExpr@(WithMD md (PROCEDURE (Closure closure_env (
         else do
           modul <- liftM getModule ask
           -- |evaluate arguments
-          evaluated_args <- liftFromEither $ seqParMap (pureEval modul) operands
+          evaluated_args <- liftFromEither $ seqParMap (determineEvaluation (pureEval modul)) $ zip args operands
           -- |extend environment with arguments
-          let extended_env = M.fromList (zip args evaluated_args) `M.union` getModEnv closure_env
+          let extended_env = M.fromList evaluated_args `M.union` getModEnv closure_env
           -- |evaluate the function's body in the extended environment
           MT.withReaderT (changeEnv extended_env . changeModule closure_env) (eval (WithMD md body))
 -- not a procedure
@@ -817,7 +820,9 @@ evalCdr rootExpr = \case
 -- |evaluate a 'quote' expression. don't evaluate argument
 evalQuote :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
 evalQuote rootExpr@(WithMD exprMD _) = \case
-  [WithMD _ (LIST [WithMD _ (ATOM (Symbol "eval")), WithMD _ (ATOM s@(Symbol (';':_)))])] -> liftM (removeENVEXPR . snd) (evalAtomOrSymbol rootExpr s) >>= lift . return . WithMD exprMD . QUOTE
+  [e@(WithMD _ (STOREENV _))] -> eval e >>= lift . return . WithMD exprMD . QUOTE
+  [e@(WithMD _ (ENVEXPR _ _))] -> lift $ return e
+  --[WithMD _ (LIST [WithMD _ (ATOM (Symbol "eval")), WithMD _ (ATOM s@(Symbol (';':_)))])] -> liftM (removeENVEXPR . snd) (evalAtomOrSymbol rootExpr s) >>= lift . return . WithMD exprMD . QUOTE
   [element] -> lift $ return $ WithMD exprMD $ QUOTE element
   xs        -> throwErr (Just rootExpr) $ "bad arity, expected 1 argument, got: " ++ show (length xs)
 
