@@ -7,24 +7,21 @@
 (define compose (f g)
   (lambda (x) (f (g x))))
 
-(defmacro bind!
-  ((m f)
+(define bind! (m f)
     (do!
       [let! x m]
-      [f x])))
+      [f x]))
 
-(defmacro cond
-   [() (error "*** error: cond - non-exhuastive patterns")]
-   [(clause1 &rest)
-     (if (eval (car 'clause1))
-         (eval (car (cdr 'clause1)))
-         (cond &rest))])
+(define cond [~clause1 &~rest]
+   (if (eval (car 'clause1))
+       (eval (car (cdr 'clause1)))
+       (cond 'rest)))
 
 (define apply (f xs)
   (eval (++ '(f) xs)))
 
-(defmacro applyn ((f xs)
-  (eval (++ f xs))))
+(defmacro applyn (f xs)
+  (eval (++ 'f 'xs)))
 
 ;; ----------
 ;; list functions
@@ -45,17 +42,6 @@
     (++ (list x) xs)
     (++ (list x) (list xs))))
 
-; need to solve hygiene for recursive macros
-(defmacro cond
-   [() (error "*** error: cond - non-exhuastive patterns")]
-   [(clause1 &rest)
-     (if (eval (car 'clause1))
-         (eval (car (cdr 'clause1)))
-         (cond &rest))])
-
-
-
-
 (define fmap [f xs]
   (if (bool/not (list? xs))
     (error "cannot map on a non list type")
@@ -64,7 +50,7 @@
       (cons (f (car xs)) (fmap f (cdr xs))))))
 
 (define map [f &xs]
-  (cond
+  (std/cond
     ((empty? xs)
      (lambda params
        (std/applyn '(map f) params)))

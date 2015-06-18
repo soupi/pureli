@@ -128,13 +128,7 @@ pureEval modul exprWithMD@(WithMD md expr) =
       QUOTE l     -> (modul, return $ WithMD md $ QUOTE l)
       LIST ls     -> (modul, evalOp exprWithMD ls)
       ENVEXPR m e -> (m, MT.withReaderT (changeModule m) (eval e))
-      STOREENV e  -> (modul, return $ WithMD md $ trace "--store--" $ ENVEXPR modul e)
-
--- |evaluate an expression in pure context
-removeENVEXPR :: WithMD Expr -> WithMD Expr
-removeENVEXPR (WithMD md (ENVEXPR m e)) = e
-removeENVEXPR e = e
-
+      STOREENV e  -> (modul, return $ WithMD md $ ENVEXPR modul e)
 
 
 -- |evaluate an expression in pure context and extend environment
@@ -165,7 +159,6 @@ addToClosureEnv (name, expr) closure_env =
 -- PROCEDURE and QUOTE are returned without evaluation
 eval :: Monad m => WithMD Expr -> Evaluation m Expr
 eval exprWithMD@(WithMD md expr) = do
-  traceM $ "#*eval*# " ++ show expr
   modul <- liftM getModule ask
   case expr of
     ATOM a      -> evalAtom exprWithMD a
@@ -173,7 +166,7 @@ eval exprWithMD@(WithMD md expr) = do
     QUOTE l     -> return $ WithMD md $ QUOTE l
     LIST ls     -> evalOp exprWithMD ls
     ENVEXPR m e -> MT.withReaderT (changeModule m) (eval e)
-    STOREENV e  -> return $ WithMD md $ trace "--store--" $ ENVEXPR modul e
+    STOREENV e  -> return $ WithMD md $ ENVEXPR modul e
 
 -- |evaluate an expression in pure context and extend environment
 evalExtend :: Monad m => [(Name, WithMD Expr)] -> WithMD Expr -> Evaluation m Expr
@@ -217,18 +210,14 @@ evalAtom rootExpr@(WithMD md _) atom = do
 -- a Symbol is searched in environment and is evaluated
 -- any other Atom is simply returned
 evalAtomOrSymbol :: Monad m => WithMD Expr -> Atom -> MEval m (Module, WithMD Expr)
-evalAtomOrSymbol rootExpr@(WithMD md _) atom = do
-  (modul, env, builtins) <- getEnvironment
+evalAtomOrSymbol (WithMD md _) atom = do
+  (modul, env, _) <- getEnvironment
   case atom of
     Symbol var -> case M.lookup var env of
       Just v  -> return (modul, v)
       Nothing -> case lookupInModule var modul of
         Just (v, vMod) -> return (vMod, v)
-        Nothing -> case M.lookup var builtins of
-          Nothing -> throwErr (Just rootExpr) $ case M.lookup var ioBuiltins of
-            Just _  -> "Cannot run IO action '" ++ var ++ "' in pure context."
-            Nothing -> "Could not find " ++ show var ++ " in environment: " ++ show (fst <$> M.toList env)
-          Just _  -> return (modul, WithMD md $ ATOM $ Symbol var) -- |^this will be handled later
+        Nothing -> return (modul, WithMD md $ ATOM $ Symbol var) -- |^this will be handled later
     other -> return (modul, WithMD md $ ATOM other)
 
 
@@ -248,6 +237,8 @@ evalOp exprWithMD (WithMD md operator:operands) = do
     l@(LIST _)        -> evalOp exprWithMD . (:operands) =<< eval (WithMD md l)
     -- |maybe it's a name for a function in the environment or a builtin function?
     (ATOM (Symbol s)) -> evalOpSymbol exprWithMD operands s
+    (ENVEXPR m e)     -> MT.withReaderT (changeModule m) (eval $ wrapInEval e) >>= evalOp exprWithMD . (:operands)
+    (QUOTE e)         -> evalOp exprWithMD (e:operands) -- might not be appropriate, check
     other             -> throwErr (Just exprWithMD) $ show other ++ " is not a function"
 
 
@@ -411,7 +402,7 @@ pureBuiltins =
     ,("zero?",      evalIs isZeroTest)
     ,("nil?",       evalIs isNilTest)
     ,("empty?",     evalIs isEmptyTest)
-    ,("symbol?",    evalIs isSymbolTest)
+    ,("keyword?",   evalIs isKeywordTest)
     ,("string?",    evalIs isStringTest)
     ,("integer?",   evalIs isIntegerTest)
     ,("real?",      evalIs isRealTest)
@@ -674,7 +665,7 @@ pureEvalLet rootExpr operands = do
 evalIf :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
 evalIf rootExpr = \case
     [bool, trueBranch, falseBranch] ->
-      eval bool >>= \case
+      eval (wrapInEval bool) >>= \case
         WithMD _ (ATOM (Bool False)) -> eval falseBranch
         _                            -> eval trueBranch
     xs -> throwErr (Just rootExpr) $ "bad arity, expected 3 arguments, got: " ++ show (length xs)
@@ -715,17 +706,32 @@ compareExprs  f _ (QUOTE (WithMD _ (ATOM x@(Symbol _)))) (QUOTE (WithMD _ (ATOM 
 compareExprs  f expr (QUOTE (WithMD _ (LIST xs))) (QUOTE (WithMD _ (LIST ys))) =
   if length xs == length ys
   then liftM and $ mapM (testCompare expr (compareExprs f)) $ zipWith (\x y -> [x,y]) xs ys
-  else throwE $ Error (Just expr) "cannot compare lists of different lengths"
-compareExprs  _ expr _ _ = throwE $ Error (Just expr) "cannot compare types"
+  else return False
+compareExprs  _ _ _ _ = return False
 
 -- |evaluate '...?' expressions
 evalIs :: Monad m => (Expr -> Bool) -> WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
 evalIs test rootExpr@(WithMD exprMD _) = \case
-  [expr] -> eval expr >>= \case
-    WithMD _ result -> if test result
-      then lift $ return $ WithMD exprMD $ ATOM $ Bool True
-      else lift $ return $ WithMD exprMD $ ATOM $ Bool False
+  [expr] -> eval expr >>= \result ->
+    getList result >>= \x -> lift . return . WithMD exprMD . ATOM . Bool . test . stripMD $ case x of
+                               (Left _ )   -> result
+                               (Right res) -> res
   xs -> throwErr (Just rootExpr) $ "bad arity, expected 1 argument, got: " ++ show (length xs)
+
+-- |
+-- find the list if it has one inside the expression
+getList :: Monad m => WithMD Expr -> MT.ReaderT (EvalState m) (MT.ExceptT Error m) (Either Error (WithMD Expr))
+getList e@(WithMD _ (LIST _)) = return $ return e
+getList   (WithMD _ (QUOTE e@(WithMD _ (LIST _)))) = return $ return e
+getList   (WithMD _ (QUOTE e@(WithMD _ (ENVEXPR _ _)))) = getList e
+getList   (WithMD _ (ENVEXPR m (WithMD md (LIST ls)))) = return $ return $ WithMD md $ LIST $ fmap (wrapInEnv m) ls
+getList   (WithMD _ (ENVEXPR m (WithMD _  (QUOTE (WithMD md (LIST ls)))))) = return $ return $ WithMD md $ LIST $ fmap (wrapInEnv m) ls
+getList e@(WithMD _ (ENVEXPR _ comp@(WithMD _ (ATOM a@(Symbol _))))) =
+  evalAtomOrSymbol e a >>= \case
+    (m, expr) -> if comp == expr then return (return e) else getList $ wrapInEnv m expr
+getList e = return $ Left $ Error (Just e) "not a list type"
+
+
 
 -- |test zero?
 isZeroTest :: Expr -> Bool
@@ -740,9 +746,10 @@ isNilTest _          = False
 
 -- |test empty?
 isEmptyTest :: Expr -> Bool
+isEmptyTest (LIST []) = True
 isEmptyTest (QUOTE (WithMD _ (LIST []))) = True
-isEmptyTest (QUOTE (WithMD _ (LIST _)))  = False
 isEmptyTest _ = False
+
 
 -- |test integer?
 isIntegerTest :: Expr -> Bool
@@ -766,13 +773,15 @@ isStringTest (ATOM (String _)) = True
 isStringTest _                 = False
 
 -- |test symbol?
-isSymbolTest :: Expr -> Bool
-isSymbolTest (QUOTE (WithMD _ (ATOM (Symbol _)))) = True
-isSymbolTest _ = False
+isKeywordTest :: Expr -> Bool
+isKeywordTest (QUOTE (WithMD _ (ENVEXPR _ (WithMD _ (ATOM (Keyword _)))))) = True
+isKeywordTest (QUOTE (WithMD _ (ATOM (Keyword _)))) = True
+isKeywordTest _ = False
 
 -- |test list?
 isListTest :: Expr -> Bool
 isListTest (QUOTE (WithMD _ (LIST _))) = True
+isListTest (LIST _) = True
 isListTest _ = False
 
 
@@ -802,29 +811,55 @@ pureEvalList (WithMD exprMD _) elements = do
 -- |evaluate 'car' expression
 evalCar :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
 evalCar rootExpr = \case
-  [expr] -> eval expr >>= \case
-    WithMD _       (QUOTE (WithMD _ (LIST (x:_)))) -> return x
-    WithMD _       (QUOTE (WithMD _ (LIST [])))    -> throwErr (Just rootExpr) "car on empty list"
-    x  -> throwErr (Just rootExpr) $ " cannot car a non-list type: " ++ show x
+  [expr] -> do
+    result <- eval expr
+    getListResult <- getList result
+    let res = case getListResult of
+                (Left _)  -> result
+                (Right y) -> y
+    case res of
+      WithMD _ (LIST (x:_)) -> return x
+      WithMD _ (LIST [])    -> throwErr (Just rootExpr) "car on empty list"
+      x  -> throwErr (Just rootExpr) $ " cannot car a non-list type: " ++ show x
   xs   -> throwErr (Just rootExpr) $ "bad arity, expected 1 argument, got: " ++ show (length xs)
 
 -- |evaluate 'cdr' expression
 evalCdr :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
 evalCdr rootExpr = \case
-  [expr] -> eval expr >>= \case
-    WithMD quoteMD (QUOTE (WithMD md (LIST (_:xs)))) -> lift $ return $ WithMD quoteMD $ QUOTE $ WithMD md $ LIST xs
-    WithMD _       (QUOTE (WithMD _ (LIST [])))      -> throwErr (Just rootExpr) "cdr on empty list"
-    _  -> throwErr (Just rootExpr) "cannot cdr a non-list type"
+  [expr] -> do
+    result <- eval expr
+    getListResult <- getList result
+    let res = case getListResult of
+                (Left _)  -> result
+                (Right y) -> y
+    case res of
+     WithMD md (LIST (_:xs))      -> lift $ return $ WithMD md $ QUOTE $ WithMD md $ LIST xs
+     WithMD _      (LIST [])      -> throwErr (Just rootExpr) "cdr on empty list"
+     _  -> throwErr (Just rootExpr) "cannot cdr a non-list type"
   xs        ->throwErr (Just rootExpr) $ "bad arity, expected 1 argument, got: " ++ show (length xs)
 
 -- |evaluate a 'quote' expression. don't evaluate argument
 evalQuote :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
 evalQuote rootExpr@(WithMD exprMD _) = \case
-  [e@(WithMD _ (STOREENV _))] -> eval e >>= lift . return . WithMD exprMD . QUOTE
-  [e@(WithMD _ (ENVEXPR _ _))] -> lift $ return e
+  --[e@(WithMD _ (STOREENV _))] -> eval e >>= lift . return . WithMD exprMD . QUOTE
+  --[e@(WithMD _ (ENVEXPR _ _))] -> lift $ return e
   --[WithMD _ (LIST [WithMD _ (ATOM (Symbol "eval")), WithMD _ (ATOM s@(Symbol (';':_)))])] -> liftM (removeENVEXPR . snd) (evalAtomOrSymbol rootExpr s) >>= lift . return . WithMD exprMD . QUOTE
-  [element] -> lift $ return $ WithMD exprMD $ QUOTE element
+  [element] -> lift . return . WithMD exprMD . QUOTE =<< (replaceStoresInQuote element)
   xs        -> throwErr (Just rootExpr) $ "bad arity, expected 1 argument, got: " ++ show (length xs)
+
+
+replaceStoresInQuote :: Monad m => WithMD Expr -> Evaluation m Expr
+replaceStoresInQuote (WithMD md expr) =
+  case expr of
+    PROCEDURE p -> return $ WithMD md $ PROCEDURE p
+    QUOTE l     -> return . WithMD md . QUOTE =<< replaceStoresInQuote l
+    LIST ls     -> return . WithMD md . LIST  =<< mapM replaceStoresInQuote ls
+    ENVEXPR m e -> return $ WithMD md $ ENVEXPR m e
+    STOREENV e  -> return . WithMD md . flip ENVEXPR e =<< liftM getModule ask
+    ATOM a      -> evalAtomOrSymbol (WithMD md expr) a >>= \case
+                    (_, e@(WithMD _ (ENVEXPR _ _))) -> return e
+                    (m, e) -> return $ WithMD md $ ENVEXPR m e
+
 
 -- |evaluate 'eval' expression. evaluate QUOTE
 evalEval :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
@@ -918,7 +953,8 @@ isNumber = \case
 
 -- |try converting an expression to a symbol
 toSymbol :: WithMD Expr -> Either Error String
-toSymbol (WithMD _ (ATOM (Symbol s))) = return s
+toSymbol (WithMD _ (ATOM (Symbol  s))) = return s
+toSymbol (WithMD _ (ATOM (Keyword k))) = return k
 toSymbol expr                         = Left $ Error (Just expr)  "expecting a symbol"
 
 -- |eval a 'length' expression on strings and lists
@@ -1031,14 +1067,14 @@ liftFromEither = \case
 -- |try to evaluate expression to a number
 evalToNumber :: Module -> WithMD Expr -> WithMD Expr -> Either Error Atom
 evalToNumber modul rootExpr expr =
-    case pureEval modul expr of
+    case pureEval modul (wrapInEval expr) of
       Right (WithMD _ (ATOM a)) -> if isNumber a then return a else Left $ Error (Just rootExpr) $ show a ++ " not a number"
       Right _        -> Left $ Error (Just rootExpr) $ show expr ++ " not a number"
       Left x -> Left x
 
 -- |try to evaluate expression to a string
 evalToString :: Monad m => WithMD Expr -> WithMD Expr -> MT.ReaderT (EvalState m) (MT.ExceptT Error m) (Either Error String)
-evalToString rootExpr expr = eval expr >>= \case
+evalToString rootExpr expr = eval (wrapInEval expr) >>= \case
   (WithMD _ (ATOM (String str))) -> lift $ return $ Right str
   _ -> lift $ return $ Left $ Error (Just rootExpr) $ show expr ++ " is not a string"
 

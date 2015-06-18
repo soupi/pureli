@@ -31,11 +31,17 @@ atom :: P.Parser Atom
 atom =  parseNumber
     <|> bool
     <|> symbol
+    <|> keyword
     <|> string
     <|> nil
 
 symbol :: P.Parser Atom
 symbol = Symbol <$> L.identifier
+
+keyword :: P.Parser Atom
+keyword = do
+  _ <- P.char ':'
+  Keyword<$> L.identifier
 
 escapeChar :: P.Parser Char
 escapeChar = P.char '\\' >> P.choice (zipWith escapedChar codes replacements)

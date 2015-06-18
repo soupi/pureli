@@ -1,11 +1,11 @@
 (module main)
 
-(defmacro cond
-  [() (error "*** error: cond - non-exhuastive patterns")]
-  [(clause1 &rest)
-     (if (eval (car 'clause1))
-         (eval (car (cdr 'clause1)))
-         (cond &rest))])
+(define cond ~params
+  (if (empty? 'params)
+      (error "*** error: cond - non-exhuastive patterns")
+      (if (eval (car (car 'params)))
+          (eval (car (cdr (car 'params))))
+          (cond (cdr 'params)))))
 
 (define main
   (do!

@@ -99,7 +99,8 @@ data Expr = LIST [WithMD Expr]  -- ^a list of expressions
 -- primitives of the language
 data Atom = Integer Integer
           | Real Double
-          | Symbol Name
+          | Symbol  Name
+          | Keyword Name
           | String String
           | Bool Bool
           | Nil deriving (Eq, Ord, Generic)

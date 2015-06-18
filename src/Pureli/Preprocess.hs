@@ -19,7 +19,6 @@ import Pureli.AST
 import Pureli.Printer()
 
 
-import Debug.Trace
 
 -- |evaluation type
 type Preprocess a = MT.ReaderT (Env, Module) (MT.ExceptT Error MT.Identity) (WithMD a)
@@ -36,9 +35,6 @@ wrapInClosureCall expr@(WithMD md _) = do
   let modul = m { getModEnv = fmap (wrapInEnv modul) (getModEnv m) }
   --return expr
   return $ WithMD md $ ENVEXPR modul expr
-
-wrapInEval :: WithMD Expr -> WithMD Expr
-wrapInEval e@(WithMD md _) = listExpr md [WithMD md $ ATOM $ Symbol "eval", e]
 
 listExpr :: Metadata -> [WithMD Expr] -> WithMD Expr
 listExpr md exprs = WithMD md $ LIST exprs
@@ -57,23 +53,22 @@ preprocessModule modul = do
 preprocess :: WithMD Expr -> Preprocess Expr
 preprocess exprWithMD@(WithMD md expr) =
   case expr of
-    ATOM a  -> traceM ("1 " ++ show expr) >> preprocessAtom exprWithMD a
-    QUOTE l -> traceM ("2 " ++ show expr) >> (return . WithMD md . QUOTE =<< return l)
-    LIST ls -> traceM ("3 " ++ show expr) >> preprocessOp exprWithMD ls
-    STOREENV e  -> traceM ("6 " ++ show expr) >> preprocess e
-    PROCEDURE _ -> traceM ("4 " ++ show expr) >> return exprWithMD
-    ENVEXPR _ _ -> traceM ("5 " ++ show expr) >> return exprWithMD
+    ATOM a  -> preprocessAtom exprWithMD a
+    QUOTE l -> (return . WithMD md . QUOTE =<< return l)
+    LIST ls -> preprocessOp exprWithMD ls
+    STOREENV e  -> preprocess e
+    PROCEDURE _ -> return exprWithMD
+    ENVEXPR _ _ -> return exprWithMD
 
 -- |preprocess an Atom.
 preprocessAtom :: WithMD Expr -> Atom -> Preprocess Expr
 preprocessAtom (WithMD md _) atom = do
   env <- getEnv
-  (\v -> trace ( "%-haaaATOM-%: " ++ show atom ++ " ~~ " ++ show v) $ return v) =<<
-    case atom of
-      Symbol var -> case M.lookup var env of
-        Just v  -> preprocess v >>= \x -> trace ( "%-ATOM-%: " ++ show atom ++ " ~~ " ++ show v) $ return x
-        Nothing -> return $ WithMD md $ ATOM $ Symbol var
-      other -> return $ WithMD md (ATOM other)
+  case atom of
+    Symbol var -> case M.lookup var env of
+      Just v  -> preprocess v
+      Nothing -> return $ WithMD md $ ATOM $ Symbol var
+    other -> return $ WithMD md (ATOM other)
 
 -- |preprocess an procedure call. might be a macro call.
 preprocessOp :: WithMD Expr -> [WithMD Expr] -> Preprocess Expr
@@ -179,14 +174,12 @@ preprocessMacro macro rootExpr operands =
           else do
             -- |preprocess arguments
             preprocessedArgs <- mapM preprocess operands
-            traceM "preprocess operands"
             -- |get arguments renamed with initial ';' as symbols
             argRenamed <- mapM (MT.lift . mapExprToSymbolName (';':)) args
             -- |extend environment by mapping arguments symbols from name to ;name
             let renamedEnv = M.fromList (zip argNames ((fmap wrapInEval (init argRenamed)) ++ [last argRenamed]))
             -- |replace arguments symbols from name to ;name in body of macro
             afterRename <- MT.withReaderT (const (renamedEnv, modul)) (preprocess body)
-            traceM "after rename"
             -- |extend environment with real arguments
             let renamedNames = map (';':) argNames
             let firstZip  = zip (init renamedNames) preprocessedArgs

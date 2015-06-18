@@ -108,11 +108,6 @@ validArgs (x:xs) = case x of
   _ -> validArgs xs
 
 
--- |
--- takes an expression and creates a closure from it
-wrapInEnv :: Module -> WithMD Expr -> WithMD Expr
-wrapInEnv m e@(WithMD md _) = WithMD md $ ENVEXPR m e
-
 ----------------
 -- Formatting
 ---------------
@@ -147,8 +142,17 @@ spaceOpener = "    "
 -- ast combinators
 ---------------------
 
+-- |
+-- takes an expression and creates a closure from it
+wrapInEnv :: Module -> WithMD Expr -> WithMD Expr
+wrapInEnv _ e@(WithMD _ (ENVEXPR _ _)) = e
+wrapInEnv m   (WithMD md (STOREENV e)) = WithMD md $ ENVEXPR m e
+wrapInEnv m e@(WithMD md _) = WithMD md $ ENVEXPR m e
+
+
 wrapInStoreEnv :: WithMD Expr -> WithMD Expr
-wrapInStoreEnv e@(WithMD _ (STOREENV _)) = e 
+wrapInStoreEnv e@(WithMD _ (ENVEXPR _ _)) = e
+wrapInStoreEnv e@(WithMD _ (STOREENV _))  = e
 wrapInStoreEnv e@(WithMD md _) = fmap (STOREENV . WithMD md) e
 
 wrapInList :: Metadata -> [WithMD Expr] -> WithMD Expr
@@ -158,4 +162,7 @@ wrapInLet :: [(WithMD Expr, WithMD Expr)] -> WithMD Expr -> WithMD Expr
 wrapInLet binders body@(WithMD md _) =
   wrapInList md [WithMD md $ ATOM $ Symbol "let", wrapInList md $ fmap (wrapInList md . (\(x,y) -> [x,y]) . fmap wrapInStoreEnv) binders, body]
 
+
+wrapInEval :: WithMD Expr -> WithMD Expr
+wrapInEval e@(WithMD md _) = WithMD md $ LIST [WithMD md $ ATOM $ Symbol "eval", e]
 

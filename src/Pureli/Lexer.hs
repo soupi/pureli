@@ -19,7 +19,7 @@ lexer = Tok.makeTokenParser style
                          , Tok.commentStart    = "{~"
                          , Tok.commentEnd      = "~}"
                          , Tok.nestedComments  = True
-                         , Tok.identStart      = P.oneOf "&!:$#%*+./<=>?@\\^|-~" <|> P.letter
+                         , Tok.identStart      = P.oneOf "&!$#%*+./<=>?@\\^|-~" <|> P.letter
                          , Tok.identLetter     = P.oneOf "!:$#%*+./<=>?@\\^|-~" <|> P.alphaNum
                          }
 

@@ -52,15 +52,17 @@ showAtom indent atom = getIndent indent ++ case atom of
   Bool True  -> "#t"
   Bool False -> "#f"
   Symbol  x  -> x
+  Keyword x  -> (':':x)
 
 -- |convert an expression to a string.
 showExpr ::  Int -> Expr -> String
 showExpr indent expr = getIndent indent ++ case expr of
+  QUOTE x@(WithMD _ (LIST _)) -> show x
   LIST xs     -> "(" ++ showListElements xs ++ ")"
-  QUOTE x     -> show x
+  QUOTE x     -> "'" ++ show x
   ATOM a      -> show a
   PROCEDURE x -> show x
-  ENVEXPR m x -> "{;env " ++ show x ++ " | " ++ show (fmap fst $ M.toList $ getModEnv m) ++ "}"
+  ENVEXPR m x -> "{;env " ++ show x ++ " | '" ++ show (fmap fst $ M.toList $ getModEnv m) ++ "}"
   STOREENV x  -> "(;storenv " ++ show x ++ ")"
 
 
