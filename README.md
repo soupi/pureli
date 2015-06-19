@@ -1,4 +1,4 @@
-Project-lang
+Pureli
 =========
 
 A purely functional, dynamically typed, lisp-like toy programming language interpreter written in Haskell.
@@ -11,6 +11,7 @@ Atomic Expressions
 - Double precision floating points (`0.002`, `-991.12`)
 - Booleans (`#t`, `#f`)
 - Strings (`"hello, world!"`)
+- Keywords (`:hello`, `:world`)
 - Nil (`nil`, `()`)
 
 Built-in Procedures
@@ -25,7 +26,7 @@ Built-in Procedures
 - `show` expression
 - `if` expression
 - `let` and `letrec`
-- `quote`, `mquote`, `eval` and `read-str`
+- `quote`, `eval` and `read-str`
 - `error`, `try` and `trace`
 - `lambda` expression
 
@@ -59,9 +60,20 @@ For example:
 - `(define main (print! "Hello, World!"))`
 
 
-### Macros
+### Unevaluated parameters
 
-It is also possible to define macros using the `defmacro` keyword.
+It is also possible to define functions with receives unevaluated parameters
+
+```rkt
+
+(module main)
+
+(define first-element (~x)
+  (eval (car 'x)))
+
+(first-element (:hello (error "will not be thrown")))
+
+```
 
 Modules
 -------
@@ -70,16 +82,19 @@ Modules
 
 It is possible to define multiple modules per file. In order to run a file, a 'main' module must be present.
 
-Syntax: `(module <name> (<exported definitions>))`
+Syntax: `(module <name> ?(<exported definitions>))`
 
 - `(<exported definitions>)` will only export definitions listed. Optional.
 
 
+
 ### Requires
 
-It is possible to import a source file using the `require` keyword at the top of the file. Cyclic imports are currently not allowed.
+It is possible to import a source file using the `require` keyword at the top of the module. Cyclic imports are currently not allowed.
 
 Syntax: `(require <filepath> <module name> ?(<imported definitions>) <?new name>)`
+
+Or when required module is in the same file: `(module <name>)`
 
 - `(<imported definitions>)` will only imported definitions listed. Optional.
 - `<new name>` will give the module a new name. Optional.
@@ -101,7 +116,7 @@ Examples
     [print! "factorial 5 is: "]
     [print! result]))
 
-(define factorial [n] 
+(define factorial [n]
   (letrec ((go (lambda (n prod)
     (if (zero? n)
       prod
@@ -116,11 +131,7 @@ Examples
 ;The program will repeat anything the user writes until ^C
 (module main)
 
-(defmacro bind!
-  ((m f)
-    (do!
-      [let! x (m)]
-      [f x])))
+(module "stdlib/std.pli" std (bind!))
 
 (define main
   (do!
@@ -128,7 +139,7 @@ Examples
     [letrec ([go!
       (lambda ()
         (do!
-          [bind! (m read!) print!]
+          [bind! (read!) print!]
           [go!]))])
       (go!)]))
 ```
@@ -138,11 +149,11 @@ Examples
 ```rkt
 (module main)
 
-(require "std.pli" std)
+(require "stdlib/std.pli" list)
 
 (define main
   (do!
-    [print! (std/elem 2 (list 1 2 3))])) ; ==> #t
+    [print! (list/elem 2 (list 1 2 3))])) ; ==> #t
 ```
 
 
@@ -151,7 +162,7 @@ Examples
 ```rkt
 (module main)
 
-(require "std.pli" std (elem) my-std)
+(require "stdlib/std.pli" list (elem) my-std)
 
 (define main
   (do!
@@ -160,7 +171,7 @@ Examples
 ```
 
 
-Project-lang Manual
+Pureli Manual
 =========
 
 Built-in Procedures
@@ -170,24 +181,24 @@ Built-in Procedures
 -------------------
 All the arithmetic operation will be used as in polish style. The operator will be written first and than the arguments.
 example:
-if we would like to use the expression "x+y" it will be written as:
-(+ x y)
-if we would like to use the expression "x-y" it will be written as:
-(- x y)
-if we would like to use the expression "x*y" it will be written as:
-(* x y)
-if we would like to use the expression "x/y" it will be written as:
-(/ x y)
-if we would like to use the expression "x%y" (modulu operation) it will be written as:
-(mod x y)
+if we would like to use the expression `x+y` it will be written as:
+`(+ x y)`
+if we would like to use the expression `x-y` it will be written as:
+`(- x y)`
+if we would like to use the expression `x*y` it will be written as:
+`(* x y)`
+if we would like to use the expression `x/y` it will be written as:
+`(/ x y)`
+if we would like to use the expression `x%y` (modulu operation) it will be written as:
+`(mod x y)`
 
 You may use more than two argument . for example:
-(+ x y z) = x+y+z
+`(+ x y z)` = `x+y+z`
 
 See maunal_tests/arithmetic.pli
 
 
-- Test (`zero?`, `empty?`, `nil?`, `number?`, `integer?`, `real?`, `list?`. `string?`, `procedure?`, `symbol?`) 
+- Test (`zero?`, `empty?`, `nil?`, `number?`, `integer?`, `real?`, `list?`. `string?`, `procedure?`, `symbol?`)
 -------------------
 
 - Comparison (`==`, `<>`, `>`, `<`, `>=`, `<=`)

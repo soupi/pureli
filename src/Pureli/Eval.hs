@@ -207,12 +207,11 @@ evalAtom rootExpr@(WithMD md _) atom = do
           Just _  -> return $ WithMD md $ ATOM $ Symbol var -- |^this will be handled later
     other -> return $ WithMD md (ATOM other)
 
--- |evaluate a primitive expression
--- a Symbol is searched in environment and is evaluated
+-- |
+-- a Symbol is searched in environment and returned with it's env
 -- any other Atom is simply returned
---evalAtomOrSymbol :: Monad m => WithMD Expr -> Atom -> MEval m (Module, WithMD Expr)
+evalAtomOrSymbol :: Monad m => Module -> Env -> WithMD Expr -> Atom -> m (Module, WithMD Expr)
 evalAtomOrSymbol modul env (WithMD md _) atom = do
- -- (modul, env, _) <- getEnvironment
   case atom of
     Symbol var -> case M.lookup var env of
       Just v  -> return (modul, v)
@@ -225,7 +224,7 @@ evalAtomOrSymbol modul env (WithMD md _) atom = do
 
 -- |evaluate a function application
 evalOp :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
-evalOp e@(WithMD md _) [] = return $ WithMD md $ ATOM Nil
+evalOp (WithMD md _) [] = return $ WithMD md $ ATOM Nil
 evalOp exprWithMD (WithMD md operator:operands) = do
   builtins <- liftM getBuiltins ask
   -- |decide what to do based on the operator
@@ -286,6 +285,7 @@ evalProcedure operands rootExpr@(WithMD md (PROCEDURE (Closure closure_env (With
 evalProcedure _ rootExpr = throwErr (Just rootExpr) "not a procedure"
 
 
+determineEvaluation :: Monad m => (WithMD Expr -> m (WithMD Expr)) -> (Name, WithMD Expr) -> m (Name, WithMD Expr)
 determineEvaluation evalF (('~':n), operand) = return . (,) n =<< evalF (wrapInStoreEnv operand)
 determineEvaluation evalF (n, operand) = return . (,) n  =<< evalF operand
 
@@ -337,12 +337,13 @@ pureEvalProcedure operands rootExpr@(WithMD md (PROCEDURE (Closure closure_env (
 pureEvalProcedure _ rootExpr = throwErr (Just rootExpr) "not a procedure"
 
 
-
+{-
 -- |bind a list of variable names and a rest variable with a list of expressions
 zipWithRest :: Ord k => k -> Metadata -> [k] -> [WithMD Expr] -> M.Map k (WithMD Expr)
 zipWithRest restVar md args ops =
   case zipWithRemains (,) args ops of
       (zipped, rest) -> M.fromList $ (restVar, WithMD md (LIST (WithMD md (ATOM $ Symbol "list") : rest))) : zipped
+-}
 
 -- |zip and get a list of unzipped elements
 zipWithRemains :: (a -> b -> c) -> [a] -> [b] -> ([c],[b])
@@ -724,7 +725,7 @@ evalIs test rootExpr@(WithMD exprMD _) = \case
 
 -- |
 -- find the list if it has one inside the expression
---getList :: Monad m => WithMD Expr -> MT.ReaderT (EvalState m) (MT.ExceptT Error m) (Either Error (WithMD Expr))
+getList :: Monad m => Module -> Env -> WithMD Expr -> m (Either Error (WithMD Expr))
 getList modul env = \case
   e@(WithMD _ (LIST _)) -> return $ return e
   (WithMD _ (QUOTE e@(WithMD _ (LIST _)))) -> return $ return e
@@ -841,7 +842,7 @@ evalQuote rootExpr@(WithMD exprMD _) = \case
 
 
 replaceStoresInQuote :: Monad m => WithMD Expr -> Evaluation m Expr
-replaceStoresInQuote rootExpr@(WithMD md expr) =
+replaceStoresInQuote (WithMD md expr) =
   case expr of
     PROCEDURE p -> return $ WithMD md $ PROCEDURE p
     QUOTE l     -> return . WithMD md . QUOTE =<< replaceStoresInQuote l
@@ -1079,6 +1080,7 @@ evalToList rootExpr expr =
     (WithMD _ (LIST list)) -> lift $ return $ Right list
     _ -> lift $ return $ Left $ Error (Just rootExpr) $ show expr ++ " is not a list"
 
+tryEvalList :: Monad m => Module -> Env -> (WithMD Expr -> m (WithMD Expr)) -> WithMD Expr -> m (WithMD Expr)
 tryEvalList modul env evalF expr = do
     result <- evalF expr
     getListResult <- getList modul env result
