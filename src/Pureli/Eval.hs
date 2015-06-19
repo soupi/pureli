@@ -209,9 +209,9 @@ evalAtom rootExpr@(WithMD md _) atom = do
 -- |evaluate a primitive expression
 -- a Symbol is searched in environment and is evaluated
 -- any other Atom is simply returned
-evalAtomOrSymbol :: Monad m => WithMD Expr -> Atom -> MEval m (Module, WithMD Expr)
-evalAtomOrSymbol (WithMD md _) atom = do
-  (modul, env, _) <- getEnvironment
+--evalAtomOrSymbol :: Monad m => WithMD Expr -> Atom -> MEval m (Module, WithMD Expr)
+evalAtomOrSymbol modul env (WithMD md _) atom = do
+ -- (modul, env, _) <- getEnvironment
   case atom of
     Symbol var -> case M.lookup var env of
       Just v  -> return (modul, v)
@@ -713,23 +713,24 @@ compareExprs  _ _ _ _ = return False
 evalIs :: Monad m => (Expr -> Bool) -> WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
 evalIs test rootExpr@(WithMD exprMD _) = \case
   [expr] -> eval expr >>= \result ->
-    getList result >>= \x -> lift . return . WithMD exprMD . ATOM . Bool . test . stripMD $ case x of
+    getEnvironment >>= (\(modul,env,_) -> getList modul env result) >>= \x -> lift . return . WithMD exprMD . ATOM . Bool . test . stripMD $ case x of
                                (Left _ )   -> result
                                (Right res) -> res
   xs -> throwErr (Just rootExpr) $ "bad arity, expected 1 argument, got: " ++ show (length xs)
 
 -- |
 -- find the list if it has one inside the expression
-getList :: Monad m => WithMD Expr -> MT.ReaderT (EvalState m) (MT.ExceptT Error m) (Either Error (WithMD Expr))
-getList e@(WithMD _ (LIST _)) = return $ return e
-getList   (WithMD _ (QUOTE e@(WithMD _ (LIST _)))) = return $ return e
-getList   (WithMD _ (QUOTE e@(WithMD _ (ENVEXPR _ _)))) = getList e
-getList   (WithMD _ (ENVEXPR m (WithMD md (LIST ls)))) = return $ return $ WithMD md $ LIST $ fmap (wrapInEnv m) ls
-getList   (WithMD _ (ENVEXPR m (WithMD _  (QUOTE (WithMD md (LIST ls)))))) = return $ return $ WithMD md $ LIST $ fmap (wrapInEnv m) ls
-getList e@(WithMD _ (ENVEXPR _ comp@(WithMD _ (ATOM a@(Symbol _))))) =
-  evalAtomOrSymbol e a >>= \case
-    (m, expr) -> if comp == expr then return (return e) else getList $ wrapInEnv m expr
-getList e = return $ Left $ Error (Just e) "not a list type"
+--getList :: Monad m => WithMD Expr -> MT.ReaderT (EvalState m) (MT.ExceptT Error m) (Either Error (WithMD Expr))
+getList modul env = \case
+  e@(WithMD _ (LIST _)) -> return $ return e
+  (WithMD _ (QUOTE e@(WithMD _ (LIST _)))) -> return $ return e
+  (WithMD _ (QUOTE e@(WithMD _ (ENVEXPR _ _)))) -> getList modul env e
+  (WithMD _ (ENVEXPR m (WithMD md (LIST ls)))) -> return $ return $ WithMD md $ LIST $ fmap (wrapInEnv m) ls
+  (WithMD _ (ENVEXPR m (WithMD _  (QUOTE (WithMD md (LIST ls)))))) -> return $ return $ WithMD md $ LIST $ fmap (wrapInEnv m) ls
+  e@(WithMD _ (ENVEXPR _ comp@(WithMD _ (ATOM a@(Symbol _))))) ->
+    evalAtomOrSymbol modul env e a >>= \case
+      (m, expr) -> if comp == expr then return (return e) else getList modul env $ wrapInEnv m expr
+  e -> return $ Left $ Error (Just e) "not a list type"
 
 
 
@@ -811,13 +812,7 @@ pureEvalList (WithMD exprMD _) elements = do
 -- |evaluate 'car' expression
 evalCar :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
 evalCar rootExpr = \case
-  [expr] -> do
-    result <- eval expr
-    getListResult <- getList result
-    let res = case getListResult of
-                (Left _)  -> result
-                (Right y) -> y
-    case res of
+  [expr] -> getEnvironment >>= (\(modul,env,_) -> tryEvalList modul env eval expr) >>= \case
       WithMD _ (LIST (x:_)) -> return x
       WithMD _ (LIST [])    -> throwErr (Just rootExpr) "car on empty list"
       x  -> throwErr (Just rootExpr) $ " cannot car a non-list type: " ++ show x
@@ -826,13 +821,7 @@ evalCar rootExpr = \case
 -- |evaluate 'cdr' expression
 evalCdr :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
 evalCdr rootExpr = \case
-  [expr] -> do
-    result <- eval expr
-    getListResult <- getList result
-    let res = case getListResult of
-                (Left _)  -> result
-                (Right y) -> y
-    case res of
+  [expr] -> getEnvironment >>= (\(modul,env,_) -> tryEvalList modul env eval expr) >>= \case
      WithMD md (LIST (_:xs))      -> lift $ return $ WithMD md $ QUOTE $ WithMD md $ LIST xs
      WithMD _      (LIST [])      -> throwErr (Just rootExpr) "cdr on empty list"
      _  -> throwErr (Just rootExpr) "cannot cdr a non-list type"
@@ -854,11 +843,11 @@ replaceStoresInQuote (WithMD md expr) =
     PROCEDURE p -> return $ WithMD md $ PROCEDURE p
     QUOTE l     -> return . WithMD md . QUOTE =<< replaceStoresInQuote l
     LIST ls     -> return . WithMD md . LIST  =<< mapM replaceStoresInQuote ls
-    ENVEXPR m e -> return $ WithMD md $ ENVEXPR m e
-    STOREENV e  -> return . WithMD md . flip ENVEXPR e =<< liftM getModule ask
-    ATOM a      -> evalAtomOrSymbol (WithMD md expr) a >>= \case
+    ENVEXPR m e -> return $ wrapInEnv m e
+    STOREENV e  -> return . flip wrapInEnv e =<< liftM getModule ask
+    ATOM a      ->   getEnvironment >>= (\(modul, env, _) -> evalAtomOrSymbol modul env (WithMD md expr) a) >>= \case
                     (_, e@(WithMD _ (ENVEXPR _ _))) -> return e
-                    (m, e) -> return $ WithMD md $ ENVEXPR m e
+                    (m, e) -> return $ wrapInEnv m e
 
 
 -- |evaluate 'eval' expression. evaluate QUOTE
@@ -1080,19 +1069,27 @@ evalToString rootExpr expr = eval (wrapInEval expr) >>= \case
 
 -- |try to evaluate expression to a list
 evalToList :: Monad m => WithMD Expr -> WithMD Expr -> MT.ReaderT (EvalState m) (MT.ExceptT Error m) (Either Error [WithMD Expr])
-evalToList rootExpr expr = eval expr >>= \case
-  WithMD _ (QUOTE (WithMD _ (LIST list))) -> lift $ return $ Right list
-  _ -> lift $ return $ Left $ Error (Just rootExpr) $ show expr ++ " is not a list"
+evalToList rootExpr expr =
+  getEnvironment >>= (\(modul,env,_) -> tryEvalList modul env eval expr) >>= \case
+    (WithMD _ (LIST list)) -> lift $ return $ Right list
+    _ -> lift $ return $ Left $ Error (Just rootExpr) $ show expr ++ " is not a list"
+
+tryEvalList modul env evalF expr = do
+    result <- evalF expr
+    getListResult <- getList modul env result
+    return $ case getListResult of
+               (Left _)  -> result
+               (Right y) -> y
 
 
 -- |try to evaluate expression to a string
 pureEvalToString :: Module -> WithMD Expr -> WithMD Expr -> Either Error String
-pureEvalToString modul rootExpr expr = pureEval modul expr >>= \case
+pureEvalToString modul rootExpr expr = pureEval modul (wrapInEval expr) >>= \case
   (WithMD _ (ATOM (String str))) -> Right str
   _ -> Left $ Error (Just rootExpr) $ show expr ++ " is not a string"
 
 -- |try to evaluate expression to a list
 pureEvalToList :: Module -> WithMD Expr -> WithMD Expr -> Either Error [WithMD Expr]
-pureEvalToList modul rootExpr expr = pureEval modul expr >>= \case
-  WithMD _ (QUOTE (WithMD _ (LIST list))) -> Right list
+pureEvalToList modul rootExpr expr = tryEvalList modul (getModEnv modul) (pureEval modul) expr >>= \case
+  (WithMD _ (LIST list)) -> Right list
   _ -> Left $ Error (Just rootExpr) $ show expr ++ " is not a list"

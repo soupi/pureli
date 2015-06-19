@@ -1,18 +1,22 @@
 (module main)
 
 (define cond ~params
-  (if (empty? 'params)
-      (error "*** error: cond - non-exhuastive patterns")
-      (if (eval (car (car 'params)))
-          (eval (car (cdr (car 'params))))
-          (cond (cdr 'params)))))
+  (letrec ((cond-helper
+            (lambda (params)
+              (if (empty? params)
+                  (error "*** error: cond - non-exhuastive patterns")
+                  (if (eval (car (car params)))
+                      (eval (car (cdr (car params))))
+                      (cond-helper (cdr params)))))))
+  (cond-helper 'params)))
+
 
 (define main
   (do!
     [print! x]))
 
 (define x
-  (cond (#f (error "error"))
+  (cond (#f (error "this is my error"))
         ((= 1 2) 2)
         ((= 3 3) 3)
         (#t "else")))

@@ -12,16 +12,21 @@
       [let! x m]
       [f x]))
 
-(define cond [~clause1 &~rest]
-   (if (eval (car 'clause1))
-       (eval (car (cdr 'clause1)))
-       (cond 'rest)))
+(define cond ~params
+  (letrec ((cond-helper
+            (lambda (params)
+              (if (empty? params)
+                  (error "*** error: cond - non-exhuastive patterns")
+                  (if (eval (car (car params)))
+                      (eval (car (cdr (car params))))
+                      (cond-helper (cdr params)))))))
+  (cond-helper 'params)))
 
 (define apply (f xs)
-  (eval (++ '(f) xs)))
+  (eval (++ (list 'f) xs)))
 
-(defmacro applyn (f xs)
-  (eval (++ 'f 'xs)))
+(define applyn (~f xs)
+  (eval (++ 'f xs)))
 
 ;; ----------
 ;; list functions
@@ -53,11 +58,11 @@
   (std/cond
     ((empty? xs)
      (lambda params
-       (std/applyn '(map f) params)))
+       (std/applyn (map f) params)))
     ((std/apply bool/or (fmap empty? xs))
      (list))
     (#t
-     (cons (std/apply f (fmap car xs)) (std/applyn '(map f) (fmap cdr xs))))))
+     (cons (std/apply f (fmap car xs)) (std/applyn (map f) (fmap cdr xs))))))
 
 
 ;; ----------
