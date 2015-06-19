@@ -126,9 +126,19 @@
       (if (= (car (car alist)) thing)
           (cdr alist)
           (cons (car alist) (remove thing (cdr alist))))))
-
+(define list->map alist
+  (if (empty? (car alist))
+      alist
+      (cond ((nil? (car (car (car alist)))) (error "Not a Map"))
+            ((nil? (cdr (car alist))) (error "Not a Map"))
+            ((empty? (cdr alist)) (car (cons (car alist) (list->map (cdr alist)))))
+      )))
 (define main
   (do!
+    [print! (list->map (list (list "a" 5) (list "b" 6)))]
+    [print! (list->map (list (list "a" 5) (list "b" 6) (list "d" 6) (list "e" 6) (list "f" 6) (list "g" 6)))]
+    [print! (list->map (list (list "a" 5) (list 6) (list "d" 6) (list "e" 6) (list "f" 6) (list "g" 6)))]
+    [print! (list->map (list (list 5) (list "b" 6) (list "d" 6) (list "e" 6) (list "f" 6) (list "g" 6)))]
     [let! x (pure (list (list "a" 5) (list "b" 6)))]
     [print! x]
     [print! (lookup "c" x)]
