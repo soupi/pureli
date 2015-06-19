@@ -1,6 +1,6 @@
 (module main)
 
-(require "stdlib/std.pli" list (map))
+(require "stdlib/std.pli" list (fmap))
 
 (define main
   (if (= (length argv) 2)
@@ -10,5 +10,5 @@
 (define run (input-file output-file)
   (do!
     (let! input-text (read-file! input-file))
-    (let ([output-text (lines->str (list/map words->str (list/map str->words (str->lines input-text))))])
+    (let ([output-text (lines->str (list/fmap words->str (list/fmap str->words (str->lines input-text))))])
       (print-file! output-file output-text))))

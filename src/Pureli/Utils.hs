@@ -145,8 +145,11 @@ spaceOpener = "    "
 -- |
 -- takes an expression and creates a closure from it
 wrapInEnv :: Module -> WithMD Expr -> WithMD Expr
+wrapInEnv _ e@(WithMD _ (PROCEDURE _)) = e
 wrapInEnv _ e@(WithMD _ (ENVEXPR _ _)) = e
 wrapInEnv m   (WithMD md (STOREENV e)) = WithMD md $ ENVEXPR m e
+wrapInEnv m e@(WithMD md (ATOM (Symbol _))) = WithMD md $ ENVEXPR m e
+wrapInEnv _ e@(WithMD _  (ATOM _)) = e
 wrapInEnv m e@(WithMD md _) = WithMD md $ ENVEXPR m e
 
 
@@ -157,6 +160,9 @@ wrapInStoreEnv e@(WithMD md _) = fmap (STOREENV . WithMD md) e
 
 wrapInList :: Metadata -> [WithMD Expr] -> WithMD Expr
 wrapInList md es = WithMD md $ QUOTE $ WithMD md $ LIST es
+
+wrapInListCall :: Metadata -> [WithMD Expr] -> WithMD Expr
+wrapInListCall md es = WithMD md $ LIST (WithMD md (ATOM $ Symbol "list") : es)
 
 wrapInLet :: [(WithMD Expr, WithMD Expr)] -> WithMD Expr -> WithMD Expr
 wrapInLet binders body@(WithMD md _) =

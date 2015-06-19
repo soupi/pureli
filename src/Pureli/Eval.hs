@@ -118,6 +118,7 @@ evalModule m =
       Just expr@(WithMD md _) -> MT.runReaderT (eval $ WithMD md $ LIST [WithMD md $ ATOM $ Symbol "do!", expr]) (EvalState modul builtinsIO)
 
 
+
 -- |evaluate an expression in pure context
 pureEval :: Module -> WithMD Expr -> Either Error (WithMD Expr)
 pureEval modul exprWithMD@(WithMD md expr) =
@@ -128,7 +129,7 @@ pureEval modul exprWithMD@(WithMD md expr) =
       QUOTE l     -> (modul, return $ WithMD md $ QUOTE l)
       LIST ls     -> (modul, evalOp exprWithMD ls)
       ENVEXPR m e -> (m, MT.withReaderT (changeModule m) (eval e))
-      STOREENV e  -> (modul, return $ WithMD md $ ENVEXPR modul e)
+      STOREENV e  -> (modul, return $ wrapInEnv modul e)
 
 
 -- |evaluate an expression in pure context and extend environment
@@ -166,7 +167,7 @@ eval exprWithMD@(WithMD md expr) = do
     QUOTE l     -> return $ WithMD md $ QUOTE l
     LIST ls     -> evalOp exprWithMD ls
     ENVEXPR m e -> MT.withReaderT (changeModule m) (eval e)
-    STOREENV e  -> return $ WithMD md $ ENVEXPR modul e
+    STOREENV e  -> return $ wrapInEnv modul e
 
 -- |evaluate an expression in pure context and extend environment
 evalExtend :: Monad m => [(Name, WithMD Expr)] -> WithMD Expr -> Evaluation m Expr
@@ -224,7 +225,7 @@ evalAtomOrSymbol modul env (WithMD md _) atom = do
 
 -- |evaluate a function application
 evalOp :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
-evalOp (WithMD md _) [] = return $ WithMD md $ ATOM Nil
+evalOp e@(WithMD md _) [] = return $ WithMD md $ ATOM Nil
 evalOp exprWithMD (WithMD md operator:operands) = do
   builtins <- liftM getBuiltins ask
   -- |decide what to do based on the operator
@@ -238,7 +239,7 @@ evalOp exprWithMD (WithMD md operator:operands) = do
     -- |maybe it's a name for a function in the environment or a builtin function?
     (ATOM (Symbol s)) -> evalOpSymbol exprWithMD operands s
     (ENVEXPR m e)     -> MT.withReaderT (changeModule m) (eval $ wrapInEval e) >>= evalOp exprWithMD . (:operands)
-    (QUOTE e)         -> evalOp exprWithMD (e:operands) -- might not be appropriate, check
+    --(QUOTE e)         -> evalOp exprWithMD (e:operands) -- might not be appropriate, check
     other             -> throwErr (Just exprWithMD) $ show other ++ " is not a function"
 
 
@@ -265,7 +266,7 @@ evalProcedure operands rootExpr@(WithMD md (PROCEDURE (Closure closure_env (With
         else do
           -- |evaluate arguments
           let (argsZipped, remains) = zipWithRemains (,) args operands
-          evaluated_args <- determineEvaluation eval (rest, wrapInList md remains) >>= \x -> mapM (determineEvaluation eval) argsZipped >>= \y -> return (x:y)
+          evaluated_args <- determineEvaluation eval (rest, wrapInListCall md remains) >>= \x -> mapM (determineEvaluation eval) argsZipped >>= \y -> return (x:y)
           -- |extend environment with arguments
           let extended_env = M.fromList evaluated_args `M.union` getModEnv closure_env
           -- |evaluate the function's body in the extended environment
@@ -314,7 +315,8 @@ pureEvalProcedure operands rootExpr@(WithMD md (PROCEDURE (Closure closure_env (
           modul <- liftM getModule ask
           -- |evaluate arguments
           let (argsZipped, remains) = zipWithRemains (,) args operands
-          evaluated_args <- liftFromEither (determineEvaluation (pureEval modul) (rest, wrapInList md remains) >>= \x -> seqParMap (determineEvaluation (pureEval modul)) argsZipped >>= \y -> return (x:y))
+          --evaluated_args <- liftFromEither (determineEvaluation (pureEval modul) (rest, wrapInList md     remains) >>= \x -> seqParMap (determineEvaluation (pureEval modul)) argsZipped >>= \y -> return (x:y))
+          evaluated_args <- liftFromEither (determineEvaluation (pureEval modul) (rest, wrapInListCall md remains) >>= \x -> seqParMap (determineEvaluation (pureEval modul)) argsZipped >>= \y -> return (x:y))
           -- |extend environment with arguments
           let extended_env = M.fromList evaluated_args `M.union` getModEnv closure_env
           -- |evaluate the function's body in the extended environment
@@ -830,15 +832,13 @@ evalCdr rootExpr = \case
 -- |evaluate a 'quote' expression. don't evaluate argument
 evalQuote :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
 evalQuote rootExpr@(WithMD exprMD _) = \case
-  --[e@(WithMD _ (STOREENV _))] -> eval e >>= lift . return . WithMD exprMD . QUOTE
-  --[e@(WithMD _ (ENVEXPR _ _))] -> lift $ return e
-  --[WithMD _ (LIST [WithMD _ (ATOM (Symbol "eval")), WithMD _ (ATOM s@(Symbol (';':_)))])] -> liftM (removeENVEXPR . snd) (evalAtomOrSymbol rootExpr s) >>= lift . return . WithMD exprMD . QUOTE
+  [e@(WithMD _ (LIST [WithMD _ (ATOM (Symbol "quote")), _]))] -> eval e
   [element] -> lift . return . WithMD exprMD . QUOTE =<< (replaceStoresInQuote element)
   xs        -> throwErr (Just rootExpr) $ "bad arity, expected 1 argument, got: " ++ show (length xs)
 
 
 replaceStoresInQuote :: Monad m => WithMD Expr -> Evaluation m Expr
-replaceStoresInQuote (WithMD md expr) =
+replaceStoresInQuote rootExpr@(WithMD md expr) =
   case expr of
     PROCEDURE p -> return $ WithMD md $ PROCEDURE p
     QUOTE l     -> return . WithMD md . QUOTE =<< replaceStoresInQuote l
@@ -853,9 +853,11 @@ replaceStoresInQuote (WithMD md expr) =
 -- |evaluate 'eval' expression. evaluate QUOTE
 evalEval :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
 evalEval rootExpr = \case
-  [element] -> eval element >>= \case
-    WithMD _ (QUOTE expr) -> eval expr
-    expr                  -> eval expr >>= eval
+  [element] -> do
+    eval element >>= \case
+      (WithMD _ (QUOTE e)) -> eval e
+      (WithMD _ (ENVEXPR m e)) -> MT.withReaderT (changeModule m) (eval e)
+      e -> return e
   xs        ->throwErr (Just rootExpr) $ "bad arity, expected 1 argument, got: " ++ show (length xs)
 
 
@@ -1043,7 +1045,7 @@ atomToDouble (Integer i) = fromIntegral i
 atomToDouble x           = error $ "trying to cast an atom to a double. implementation error, should not happend: " ++ show x
 
 -- |an evaluation of an something in pure context
-pureEvaluation :: Module -> PureEval a -> Either Error a
+pureEvaluation :: Show a => Module -> PureEval a -> Either Error a
 pureEvaluation m go =
   MT.runIdentity $ MT.runExceptT $ MT.runReaderT go (EvalState m pureContextBuiltins)
 

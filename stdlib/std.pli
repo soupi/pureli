@@ -4,6 +4,10 @@
 
 (define id (x) x)
 
+(define trace-id (x) (trace x x))
+
+(define trace-msg-id (msg x) (trace (++ msg " " (show x)) x))
+
 (define compose (f g)
   (lambda (x) (f (g x))))
 
@@ -23,7 +27,7 @@
   (cond-helper 'params)))
 
 (define apply (f xs)
-  (eval (++ (list 'f) xs)))
+  (eval (++ (list f) xs)))
 
 (define applyn (~f xs)
   (eval (++ 'f xs)))
@@ -44,13 +48,14 @@
 
 (define cons [x xs]
   (if (list? xs)
-    (++ (list x) xs)
-    (++ (list x) (list xs))))
+      (++ (list x) xs)
+      (++ (list x) (list xs))))
 
 (define fmap [f xs]
   (if (bool/not (list? xs))
     (error "cannot map on a non list type")
-    (if (empty? xs)
+    (if
+      (empty? xs)
       xs
       (cons (f (car xs)) (fmap f (cdr xs))))))
 
@@ -63,7 +68,6 @@
      (list))
     (#t
      (cons (std/apply f (fmap car xs)) (std/applyn (map f) (fmap cdr xs))))))
-
 
 ;; ----------
 ;; bool functions
@@ -122,11 +126,25 @@
 (define test-map! ()
   (do!
     [print! "test list/map"]
+    [print! (list/map std/id (list))]
+    [print! (list/map std/id (list 1 2 3))]
     [print! (list/map show (list))]
     [print! (list/map show (list 1 2 3))]
-    [print! (list/map std/id (list 1 2 3))]
     [print! (list/map (lambda (x) (+ 0.0 x)) (list 1 2 3))]
     [print! (list/map (lambda (x) (+ 1 x)) (list 1 2 3))]))
+
+(define test-fmap! ()
+  (do!
+    [print! "test list/fmap"]
+    [print! (list/fmap std/id (list))]
+    [print! (list/fmap std/id (list 1 2 3))]
+    [print! (list/fmap show (list))]
+    [print! (list/fmap show (list 1 2 3))]
+    [print! (list/fmap std/id (list 1 2 3))]
+    [print! (list/fmap (lambda (x) (+ 0.0 x)) (list 1 2 3))]
+    [print! (list/fmap (lambda (x) (+ 1 x)) (list 1 2 3))]))
+
+
 
 (define test-bind! ()
   (do!
