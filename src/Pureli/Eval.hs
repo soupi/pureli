@@ -779,6 +779,7 @@ isStringTest _                 = False
 isKeywordTest :: Expr -> Bool
 isKeywordTest (QUOTE (WithMD _ (ENVEXPR _ (WithMD _ (ATOM (Keyword _)))))) = True
 isKeywordTest (QUOTE (WithMD _ (ATOM (Keyword _)))) = True
+isKeywordTest (ATOM (Keyword _)) = True
 isKeywordTest _ = False
 
 -- |test list?

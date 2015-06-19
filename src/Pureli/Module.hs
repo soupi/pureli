@@ -13,14 +13,12 @@ import Control.Exception (IOException, catch)
 import qualified Control.Monad.Trans.Class as MT
 import qualified Control.Monad.Trans.Except as MT
 import qualified Control.Monad.Trans.State.Strict as MT
-import qualified Data.Functor.Identity as MT
 import qualified Data.Map as M
 
 import Pureli.AST
 import Pureli.Utils
 import Pureli.Parser
 import Pureli.Printer()
-import Pureli.Preprocess
 
 import Paths_Pureli (getDataFileName)
 
@@ -114,12 +112,12 @@ getModuleFromFile fileName mName = do
           modul   <- case fromDefToModule reqMods res of
             Left err -> MT.throwE (Error Nothing err)
             Right x  -> MT.lift $ return x
-          let prp = MT.runIdentity $ MT.runExceptT $ preprocessModule modul
-          preprocessedModule <- case prp of
-            Left err -> MT.throwE err
-            Right rs -> return rs
-          MT.lift MT.get >>= MT.lift . MT.put . M.insert (fileName, mName) preprocessedModule
-          return preprocessedModule
+          --let prp = MT.runIdentity $ MT.runExceptT $ preprocessModule modul
+          --preprocessedModule <- case prp of
+          --  Left err -> MT.throwE err
+          --  Right rs -> return rs
+          MT.lift MT.get >>= MT.lift . MT.put . M.insert (fileName, mName) modul --preprocessedModule
+          return modul -- preprocessedModule
 
 
 -- |

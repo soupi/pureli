@@ -45,7 +45,7 @@ getIndent indent = foldr (++) "" $ replicate indent "  "
 -- |convert an atom to a string.
 showAtom :: Int -> Atom -> String
 showAtom indent atom = getIndent indent ++ case atom of
-  Nil -> "nil"
+  Nil        -> "nil"
   Integer x  -> show x
   Real    x  -> show x
   String  x  -> show x
@@ -62,7 +62,7 @@ showExpr indent expr = getIndent indent ++ case expr of
   QUOTE x     -> "'" ++ show x
   ATOM a      -> show a
   PROCEDURE x -> show x
-  ENVEXPR m x -> "{;env " ++ show x ++ " | '" ++ show (fmap fst $ M.toList $ getModEnv m) ++ "}"
+  ENVEXPR _ x -> "~" ++ show x
   STOREENV x  -> "(;storenv " ++ show x ++ ")"
 
 

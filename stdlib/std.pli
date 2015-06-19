@@ -69,6 +69,12 @@
     (#t
      (cons (std/apply f (fmap car xs)) (std/applyn (map f) (fmap cdr xs))))))
 
+(define range (low high)
+  (if (>= low high)
+      low
+      (list/cons low
+                 (range (+ low 1) high))))
+
 ;; ----------
 ;; bool functions
 (module bool)
@@ -131,7 +137,9 @@
     [print! (list/map show (list))]
     [print! (list/map show (list 1 2 3))]
     [print! (list/map (lambda (x) (+ 0.0 x)) (list 1 2 3))]
-    [print! (list/map (lambda (x) (+ 1 x)) (list 1 2 3))]))
+    [print! (list/map (lambda (x) (+ 1 x)) (list 1 2 3))]
+    [print! (list/map + (list 1 2 3) (list 3 2 1))]
+    [print! (list/map list/cons (list 1 2 3) (list 3 2 1))]))
 
 (define test-fmap! ()
   (do!
