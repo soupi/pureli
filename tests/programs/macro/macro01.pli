@@ -1,14 +1,14 @@
 ;macro test
 (module main)
 
-(defmacro show
-  [(f)
+(define show (f)
    (if (procedure? f)
      "<procedure>"
-      ((eval (mquote show)) f))])
+      ((eval (mquote show)) f)))
 
 (define main
    (do!
+     [print! "failure might including an infinite loop"]
      [print! (show "hello world")]
      [print! (show +)]
      [print! (show (lambda () 5))]))

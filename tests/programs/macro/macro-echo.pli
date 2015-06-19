@@ -2,11 +2,7 @@
 
 (module main)
 
-(defmacro bind!
-    ((m f)
-      (do!
-        [let! x (m)]
-        [f x])))
+(require "stdlib/std.pli" std (bind!))
 
 (define main
    (do!
@@ -15,6 +11,6 @@
        ([go!
           (lambda ()
             (do!
-              [bind! read! print!]
+              [std/bind! (read!) print!]
               [go!]))])
        (go!)]))

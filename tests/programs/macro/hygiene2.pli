@@ -1,9 +1,10 @@
 (module main)
 
 (define main
-  (pure (let ((tmp 5)) (test (+ tmp 9)))))
+  (do!
+    (print! "expected result: 15")
+    (print! (let ((tmp 5)) (test (+ tmp 9))))))
 
-(defmacro test
-  ((x)
+(define test (~x)
    (let ((tmp 1))
-     (+ tmp x))))
+     (+ tmp x)))

@@ -2,9 +2,8 @@
 
 (define plus +)
 
-(defmacro test
-  ((x y)
-   (plus x y)))
+(define test (~x ~y)
+   (plus x y))
 
 (define main
   (do!

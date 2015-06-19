@@ -353,21 +353,23 @@ zipWithRemains f (x:xs) (y:ys) =
       (zipped, rest) -> (f x y : zipped, rest)
 
 
+
 -- |tries to find symbol in environment and evaluate function call
 evalOpSymbol :: Monad m => WithMD Expr -> [WithMD Expr] -> Name -> Evaluation m Expr
 evalOpSymbol exprWithMD operands name = do
   (modul, env, builtins) <- getEnvironment
-  case M.lookup name builtins of
-    Just op -> op exprWithMD operands
-    Nothing -> case M.lookup name ioBuiltins of
-      Just _  -> throwErr (Just exprWithMD) $ "Cannot run IO action '" ++ name ++ "' in pure context."
-      Nothing -> case M.lookup name env of
-        Just v  -> eval v >>= \result -> evalOp exprWithMD (result : operands)
-        Nothing -> case lookupInModule name modul of
+  case M.lookup name env of
+    Just v  -> eval v >>= \result -> evalOp exprWithMD (result : operands)
+    Nothing -> case lookupInModule name modul of
+      Just (v, vMod) -> do
+        result <- MT.withReaderT (changeModule vMod) (eval v)
+        MT.withReaderT (changeModule modul) $ evalOp exprWithMD (result : operands)
+      Nothing -> case M.lookup name builtins of
+        Just op -> op exprWithMD operands
+        Nothing -> case M.lookup name ioBuiltins of
+          Just _  -> throwErr (Just exprWithMD) $ "Cannot run IO action '" ++ name ++ "' in pure context."
           Nothing -> throwErr (Just exprWithMD) $ " Could not find " ++ show name ++ " in environment: " ++ show (fst <$> M.toList env) ++ unlines ("": listMods 0 modul)
-          Just (v, vMod) -> do
-            result <- MT.withReaderT (changeModule vMod) (eval v)
-            MT.withReaderT (changeModule modul) $ evalOp exprWithMD (result : operands)
+
 
 -------------
 -- Builtins
