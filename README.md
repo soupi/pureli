@@ -184,10 +184,12 @@ if we would like to use the expression "x%y" (modulu operation) it will be writt
 You may use more than two argument . for example:
 (+ x y z) = x+y+z
 
---See maunal_tests/arithmetic.pli--
+See maunal_tests/arithmetic.pli
 
 
 - Test (`zero?`, `empty?`, `nil?`, `number?`, `integer?`, `real?`, `list?`. `string?`, `procedure?`, `symbol?`) 
+-------------------
+
 - Comparison (`==`, `<>`, `>`, `<`, `>=`, `<=`)
 -------------------
 
