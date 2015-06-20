@@ -32,7 +32,7 @@ run = \case
         evalModule (addToEnv ("argv", args) modul)
       case result of
         Left err                -> print err
-        Right (WithMD _ res) -> print res
+        Right _ -> return ()
 
 
 helpMsg :: String

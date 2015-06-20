@@ -1,7 +1,11 @@
 (module main)
 
+(require id (id))
 (require "run-extra.pli" run-extra extra (hello-str))
 
 (define main
-  (print! extra/hello-str))
+  (print! (id/id extra/hello-str)))
 
+(module id)
+
+(define id (x) x)

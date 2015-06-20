@@ -1,0 +1,62 @@
+;; tree generation
+;; https://www.reddit.com/r/dailyprogrammer/comments/1t0r09/121613_challenge_145_easy_tree_generation/
+
+(module main)
+
+(require "stdlib/std.pli" std (bind!))
+
+(require logic)
+
+(define main
+  (do!
+    (print! "Tree generation software.")
+    (print! "usage: <number> <trunk-character> <leaf-character>")
+    (print! "the <number> should be between 3 and 21 and must be odd")
+    (print! "enter now:")
+    (let! input (std/bind! (read!) (lambda (input) (pure (logic/evaluate-input input)))))
+    (print! "")
+    (let ([size (car input)] [trunk (car (cdr input))] [leaf (car (cdr (cdr input)))])
+         (print! (logic/calculate-tree size trunk leaf)))))
+
+
+
+(module logic (evaluate-input calculate-tree))
+
+(require "stdlib/std.pli" std)
+(require "stdlib/std.pli" list)
+(require "stdlib/std.pli" bool)
+
+(define apply std/apply)
+(define cons list/cons)
+(define and  bool/and)
+(define replicate list/replicate)
+
+(define evaluate-input (input)
+  (let ((input-list (str->words input)))
+    (if (<> 3 (length input-list))
+        (error (++ "expected 3 arguments but got: " (show (length input-list))))
+        (let
+          ([num (eval (read-str (car input-list)))]
+           [trunk (car (cdr input-list))]
+           [leaf (car (cdr (cdr input-list)))])
+          (if (and (integer? num) (= 1 (mod num 2)) (= 1 (length trunk)) (= 1 (length leaf)))
+              (list num trunk leaf)
+              (error "bad arguments."))))))
+
+
+(define calculate-tree (size trunk leaf)
+  (lines->str (++ (calculate-tree-helper 1 size leaf) (list (calculate-line (/ size 3) size trunk)))))
+
+(define calculate-tree-helper (times size leaf)
+  (if (> times size)
+      (list)
+      (cons (calculate-line times size leaf) (calculate-tree-helper (+ times 2) size leaf))))
+
+(define calculate-line (times size character)
+  (apply
+    ++
+    (++ (replicate (/ (- size times) 2) " ")
+        (replicate times character)
+        (replicate (/ (- size times) 2) " "))))
+
+

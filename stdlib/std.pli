@@ -151,6 +151,12 @@
      (#t (list l))))
 
 
+(define replicate (times x)
+  (if (<= times 0)
+      (list)
+      (cons x (replicate (- times 1) x))))
+
+
 ;;;;;;;;;;;;;;;;
 ;; Dictionary ;;
 ;;;;;;;;;;;;;;;;
