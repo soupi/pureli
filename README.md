@@ -213,6 +213,30 @@ See maunal_tests/arithmetic.pli
 - Test (`zero?`, `empty?`, `nil?`, `number?`, `integer?`, `real?`, `list?`. `string?`, `procedure?`, `symbol?`)
 -------------------
 
+Test operation will give you information about the state of an expression:
+
+`zero?` - check if an expression `x` is zero, use : `(zero? x)`
+
+`empty?` - check if a data structure `x` is empty, use : `(empty? x)`
+
+`nil?` - check if an expression `x` is nil(null), use : `(nil? x)`
+
+`number?` - check if an expression `x` is a number, use : `(number? x)`
+
+`integer?` - check if an expression `x` is an integer, use : `(integer? x)`
+
+`real?` - check if an expression `x` is an real number, use : `(real? x)`
+
+`list?` - check if an expression `x` is a list, use : `(list? x)`
+
+`string?` - check if an expression `x` is a string, use : `(string? x)`
+
+`procedure?` - check if an expression `x` is a procedure, use : `(procedure? x)`
+
+`symbol?` - check if an expression `x` is a symbol, use : `(symbol? x)`
+
+See maunal_tests/tests.pli
+
 - Comparison (`==`, `<>`, `>`, `<`, `>=`, `<=`)
 -------------------
 
