@@ -180,19 +180,31 @@ Built-in Procedures
 - Arithmetic operations (`+`, `-`, `*`, `/`, `mod`)
 -------------------
 All the arithmetic operation will be used as in polish style. The operator will be written first and than the arguments.
+
 example:
+
 if we would like to use the expression `x+y` it will be written as:
+
 `(+ x y)`
+
 if we would like to use the expression `x-y` it will be written as:
+
 `(- x y)`
+
 if we would like to use the expression `x*y` it will be written as:
+
 `(* x y)`
+
 if we would like to use the expression `x/y` it will be written as:
+
 `(/ x y)`
+
 if we would like to use the expression `x%y` (modulu operation) it will be written as:
+
 `(mod x y)`
 
 You may use more than two argument . for example:
+
 `(+ x y z)` = `x+y+z`
 
 See maunal_tests/arithmetic.pli
