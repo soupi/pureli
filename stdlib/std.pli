@@ -75,6 +75,25 @@
     (#t
      (cons (std/apply f (fmap car xs)) (std/applyn (map f) (fmap cdr xs))))))
 
+
+(define reduce [f &xs]
+  (std/cond
+    [(= 0 (length xs))
+     (lambda (ys) (reduce f ys))]
+    [(> 1 (length xs))
+     (error (++ "arity problem. reduce expects 2 arguments, got: " (show (length xs))))]
+    [#t
+     (let ([ls (car xs)])
+       (std/cond
+         [(bool/not (list? ls))
+          (error (words->str (list "cannot reduce a non list type:" (show ls))))]
+         [(empty? ls) (f)]
+         [#t
+          (std/apply f ls)]))]))
+
+
+
+
 (define range (low high)
   (if (>= low high)
       low
@@ -165,6 +184,18 @@
 
 (require std)
 (require list)
+(require bool)
+
+
+(define dict->list (dict)
+  dict)
+
+(define dict? [xs]
+  (bool/and
+    (list? xs)
+    (std/apply bool/and (list/map list? xs))
+    (std/apply bool/and (list/map (lambda (x) (= 2 (length x))) xs))))
+
 
 (define lookup (thing alist)
      (if (empty? alist)
@@ -194,6 +225,38 @@
         (std/cond ((nil? (car (car (car alist)))) (error "Not a Dictionary"))
                   ((nil? (cdr (car alist))) (error "Not a Dictionary"))
                   ((empty? (cdr alist)) (car (list/cons (car alist) (list->dict (cdr alist))))))))
+
+
+(define map [f &xs]
+  (std/cond
+    [(= 0 (length xs))
+     (lambda (ys) (map f ys))]
+    [(> 1 (length xs))
+     (error (++ "arity problem. map expects 2 arguments, got: " (show (length xs))))]
+    [#t
+     (let ([dict (car xs)])
+       (std/cond
+         [(bool/not (dict? dict))
+          (error (words->str (list "cannot map a non dictionary type:" (show dict))))]
+         [(empty? dict) (list)]
+         [#t
+          (list/cons (list (car (car dict)) (f (car (cdr (car dict))))) (map f (cdr dict)))]))]))
+
+(define reduce [f &xs]
+  (std/cond
+    [(= 0 (length xs))
+     (lambda (ys) (reduce f ys))]
+    [(> 1 (length xs))
+     (error (++ "arity problem. reduce expects 2 arguments, got: " (show (length xs))))]
+    [#t
+     (let ([dict (car xs)])
+       (std/cond
+         [(bool/not (dict? dict))
+          (error (words->str "cannot reduce a non dictionary type:" (show dict)))]
+         [(empty? dict) (f)]
+         [#t
+          (std/apply f (list/map (std/compose car cdr) dict))]))]))
+
 
 
 
@@ -234,26 +297,32 @@
 ;; Boolean ;;
 ;;;;;;;;;;;;;
 
-(module bool)
+(module bool (not and or))
 
 (require std)
 
 (define not [test]
   (if test #f #t))
 
-(define and params
+(define and ~params
+  (and-helper 'params))
+
+(define and-helper (params)
   (if (empty? params)
       #t
-      (if (car params)
-          (std/apply and (cdr params))
+      (if (eval (car params))
+          (and-helper (cdr params))
           #f)))
 
-(define or params
+(define or ~params
+  (or-helper 'params))
+
+(define or-helper (params)
   (if (empty? params)
       #f
       (if (car params)
           #t
-          (std/apply or (cdr params)))))
+          (or-helper (cdr params)))))
 
 
 ;;;;;;;;;;;
