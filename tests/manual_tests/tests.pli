@@ -1,0 +1,41 @@
+(module main)
+
+; using arithmetic operations
+(define id (x)
+  x)
+
+(define main
+  (do!
+  [print! "(zero? 0):"]
+  [print! (zero? 0)]
+  [print! "(empty? (list 5 6)):"]
+  [print! (empty? (list 5 6))]
+  [print! "(empty? (list))"]
+  [print! (empty? (list))]
+  [print! "(nil? ())"]
+  [print! (nil? ())]
+  [print! "(nil? (list 5))"]
+  [print! (nil? (list 5))]
+  [print! "(number? (list 10 5 6))"]
+  [print! (number? (list 10 5 6))]
+  [print! "(number? 10)"]
+  [print! (number? 10)]
+  [print! "(number? 10.1)"]
+  [print! (number? 10.1)]
+  [print! "(integer? 10.1)"]
+  [print! (integer? 10.1)]
+  [print! "(integer? 1)"]
+  [print! (integer? 1)]
+  [print! "(real? 1)"]
+  [print! (real? 1)]
+  [print! "(real? 3.14)"]
+  [print! (real? 3.14)]
+  [print! "(list? (list 1 2 3))"]
+  [print! (list? (list 1 2 3))]
+  [print! "(string? \"x\")"]
+  [print! (string? "x")]
+  [print! "(procedure? id)"]
+  [print! (procedure? id)]
+  [print! "(symbol? 'x)"]
+  [print! (symbol? 'x)]
+  ))

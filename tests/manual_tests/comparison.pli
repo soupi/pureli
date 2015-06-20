@@ -1,0 +1,15 @@
+(module main)
+
+; using comparison operations
+
+(define main
+  (do!
+  [print! "6>5"]
+  [print! (> 6 5)]
+  [print! "6<5"]
+  [print! (< 6 5)]
+  [print! "6 = 5"]
+  [print! (= 6 5)]
+  [print! "6 <> 5"]
+  [print! (<> 6 5)]
+  ))

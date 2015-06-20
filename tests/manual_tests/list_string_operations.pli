@@ -1,0 +1,19 @@
+(module main)
+
+;using list and string operations
+
+(define main
+  (do!
+    [print! "length of (1 2 3) is:"]
+    [print! (length (list 1 2 3))]
+    [print! "append of (1 2 3) and (3 2 1) is:"]
+    [print! (++ (list 1 2 3) (list 3 2 1))]
+    [print! "slice of (1 2 3 4 5 6) from place 0 to place 3:"]
+    [print! (slice 0 3 (list 1 2 3 4 5 6))]
+    [print! "append of \"abc\" to \"def\" is:"]
+    [print! (++ "abc" "def")]
+    [print! "slice of \"abcdef\" from place 0 to place 3:"]
+    [print! (slice 0 3 "abcdef")]
+    [print! "length of \"abc\" is:"]
+    [print! (length "abc")]
+  ))
