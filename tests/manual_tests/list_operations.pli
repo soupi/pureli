@@ -1,0 +1,11 @@
+(module main)
+
+; using list operations
+
+(define main
+  (do!
+    [print! "car of (1 2 3) is:"]
+    [print! (car (list 1 2 3))]
+    [print! "cdr of (1 2 3) is:"]
+    [print! (cdr (list 1 2 3))]
+  ))
