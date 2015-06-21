@@ -11,15 +11,15 @@ Pureli is a purely functional, dynamically typed, parallel evaluated, lisp-like 
 These are all very big words, so let's analyze them one by one:
 
 - **Pure**: in Pureli, everything is immutable. Variables do not vary and it is not possible to destructively update data structures. Side Effects such as input and output are explicitly controlled by the programmer and can only happen in specific places.
-- ***Functional**: Pureli follows the functional programming paradigm. In Pureli there are no loops or classes, there are recursion, modules and higher order functions.
+- **Functional**: Pureli follows the functional programming paradigm. In Pureli there are no loops or classes, there are recursion, modules and higher order functions.
 - **Dynamically Typed**: In Pureli, the types of values are checked at runtime. This makes code like this: `(if #t 1 "hello")` possible to run.
 - **Parallel Evaluated**: In Pureli, arguments to functions in pure context can be evaluated (run) in parallel automatically.
 - **Lisp-like**: Pureli's syntax is inherited from the long tradition of the LiSP familly of programming languages.
 
 We will continue to explore these qualities that makes Pureli interesting and unique in future chapters.
 
-From the Frying Pan and into the Fire
--------------------------------------
+Out of the Frying Pan and into the Fire
+---------------------------------------
 
 Lets start by learning about Pureli's Atomic Expressions.
 
