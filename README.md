@@ -18,8 +18,8 @@ Built-in Procedures
 -------------------
 
 - Arithmetic operations (`+`, `-`, `*`, `/`, `mod`)
-- Tests (`zero?`, `empty?`, `nil?`, `number?`, `integer?`, `real?`, `list?`. `string?`, `procedure?`, `symbol?`)
-- Comparison (`==`, `<>`, `>`, `<`, `>=`, `<=`)
+- Tests (`zero?`, `empty?`, `nil?`, `number?`, `integer?`, `real?`, `list?`. `string?`, `procedure?`, `symbol?`, `keyword?`)
+- Comparison (`=`, `<>`, `>`, `<`, `>=`, `<=`)
 - List operations (`list`, `car`, `cdr`)
 - List and String operations (`++`, `slice`, `length`)
 - List<->String operations (`str->lines`, `str->words`, `lines->str`, `words->str`)
@@ -237,12 +237,12 @@ Test operation will give you information about the state of an expression:
 
 See maunal_tests/tests.pli
 
-- Comparison (`==`, `<>`, `>`, `<`, `>=`, `<=`)
+- Comparison (`=`, `<>`, `>`, `<`, `>=`, `<=`)
 -------------------
 
 Comparison operations are used to compare between expressions:
 
-`==` - to check if two expressions `x` and `y` are equal , use : `(== x y)`
+`=` - to check if two expressions `x` and `y` are equal , use : `(= x y)`
 
 `<>` - to check if two expressions `x` and `y` are not equal , use : `(<> x y)`
 
@@ -281,7 +281,7 @@ List and String operations are also used to manipulate a list and get info on it
 
 `length` - to get the length of `lst` use : `(length lst)`
 
-You may do the same for strings. 
+You may do the same for strings.
 
 See maunal_tests/list_string_operations.pli
 

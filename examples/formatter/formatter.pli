@@ -1,3 +1,4 @@
+;; takes an input file and output file and will trim all excessive spaces
 (module main)
 
 (require "stdlib/std.pli" list (fmap))

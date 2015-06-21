@@ -1,0 +1,18 @@
+(module main)
+
+; calling this should generate 2x sparks. x for procedure call and 2x for +
+(define add (a b)
+  (+ a b))
+
+; calling this should only generate x sparks. because it is not in pure context
+(define io-add (a b)
+  (pure (+ a b)))
+
+(define loop loop)
+
+(define main
+  (do!
+    (print! "This should create 30 sparks,")
+    (print! "10 for procedure call, 10 for +, and another 10 for + (without procedure call)")
+    (let! result (pure (add loop (trace 100001 100001))))
+    (print! result)))

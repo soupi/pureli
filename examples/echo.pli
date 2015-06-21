@@ -1,4 +1,4 @@
-; echo program with macro test
+; echo program
 
 (module main)
 
@@ -7,6 +7,7 @@
 (define main
    (do!
      [print! "echo program"]
+     [print! "to terminate, press ^C"]
      [letrec
        ([go!
           (lambda ()

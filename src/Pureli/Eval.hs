@@ -237,7 +237,7 @@ evalOp exprWithMD (WithMD md operator:operands) = do
     l@(LIST _)        -> evalOp exprWithMD . (:operands) =<< eval (WithMD md l)
     -- |maybe it's a name for a function in the environment or a builtin function?
     (ATOM (Symbol s)) -> evalOpSymbol exprWithMD operands s
-    (ENVEXPR m e)     -> MT.withReaderT (changeModule m) (eval $ wrapInEval e) >>= evalOp exprWithMD . (:operands)
+    (ENVEXPR m e)     -> MT.withReaderT (changeModule m) (eval e) >>= evalOp exprWithMD . (:operands)
     --(QUOTE e)         -> evalOp exprWithMD (e:operands) -- might not be appropriate, check
     other             -> throwErr (Just exprWithMD) $ show other ++ " is not a function"
 
@@ -837,7 +837,7 @@ evalCdr rootExpr = \case
 evalQuote :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
 evalQuote rootExpr@(WithMD exprMD _) = \case
   [e@(WithMD _ (LIST [WithMD _ (ATOM (Symbol "quote")), _]))] -> eval e
-  [element] -> lift . return . WithMD exprMD . QUOTE =<< (replaceStoresInQuote element)
+  [element] -> lift . return . WithMD exprMD . QUOTE =<< replaceStoresInQuote element
   xs        -> throwErr (Just rootExpr) $ "bad arity, expected 1 argument, got: " ++ show (length xs)
 
 
@@ -857,7 +857,7 @@ replaceStoresInQuote (WithMD md expr) =
 -- |evaluate 'eval' expression. evaluate QUOTE
 evalEval :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
 evalEval rootExpr = \case
-  [element] -> do
+  [element] ->
     eval element >>= \case
       (WithMD _ (QUOTE e)) -> eval e
       (WithMD _ (ENVEXPR m e)) -> MT.withReaderT (changeModule m) (eval e)

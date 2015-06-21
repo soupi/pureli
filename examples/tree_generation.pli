@@ -1,36 +1,44 @@
 ;; tree generation
 ;; https://www.reddit.com/r/dailyprogrammer/comments/1t0r09/121613_challenge_145_easy_tree_generation/
 
+;; entry module
 (module main)
 
+;; requires
 (require "stdlib/std.pli" std (bind!))
-
 (require logic)
 
+;; entry point
 (define main
   (do!
-    (print! "Tree generation software.")
-    (print! "usage: <number> <trunk-character> <leaf-character>")
-    (print! "the <number> should be between 3 and 21 and must be odd")
-    (print! "enter now:")
+    (print! welcome-msg)
     (let! input (std/bind! (read!) (lambda (input) (pure (logic/evaluate-input input)))))
     (print! "")
     (let ([size (car input)] [trunk (car (cdr input))] [leaf (car (cdr (cdr input)))])
          (print! (logic/calculate-tree size trunk leaf)))))
 
+(define welcome-msg
+  (lines->str
+    (list
+      "Tree generation software."
+      "usage: <number> <trunk-character> <leaf-character>"
+      "the <number> should be at between 3 and 79 and must be odd")))
 
-
+;; logic module
 (module logic (evaluate-input calculate-tree))
 
+;; requires
 (require "stdlib/std.pli" std)
 (require "stdlib/std.pli" list)
 (require "stdlib/std.pli" bool)
 
+;; disqualification
 (define apply std/apply)
 (define cons list/cons)
 (define and  bool/and)
 (define replicate list/replicate)
 
+;; creates data from the input
 (define evaluate-input (input)
   (let ((input-list (str->words input)))
     (if (<> 3 (length input-list))
@@ -43,20 +51,32 @@
               (list num trunk leaf)
               (error "bad arguments."))))))
 
-
+;; calculates a tree
 (define calculate-tree (size trunk leaf)
-  (lines->str (++ (calculate-tree-helper 1 size leaf) (list (calculate-line (/ size 3) size trunk)))))
+  (lines->str
+    (++
+      (calculate-tree-helper 1 size leaf) ;; leafs
+      (replicate (if (< size 7) (/ size 3) (/ size 6)) ;; trunk
+                 (calculate-line (calculate-trunk-size size trunk) size trunk)))))
 
+;; calculate how wide the trunk should be
+(define calculate-trunk-size (size trunk)
+  (let ([trunk-size (/ size 3)])
+    (if (= 0 (mod trunk-size 2))
+        (+ trunk-size 1)
+        trunk-size)))
+
+;; calculates the leafs of the tree
 (define calculate-tree-helper (times size leaf)
   (if (> times size)
       (list)
       (cons (calculate-line times size leaf) (calculate-tree-helper (+ times 2) size leaf))))
 
+;; calculates a line in a tree
 (define calculate-line (times size character)
   (apply
     ++
     (++ (replicate (/ (- size times) 2) " ")
         (replicate times character)
         (replicate (/ (- size times) 2) " "))))
-
 
