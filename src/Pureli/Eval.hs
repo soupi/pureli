@@ -20,6 +20,7 @@ import qualified Data.Functor.Identity as MT
 import Data.Function (on)
 import qualified Data.Map as M
 import qualified Control.Parallel.Strategies as P
+import qualified Data.Char as C (toUpper, toLower)
 
 import Debug.Trace
 
@@ -424,6 +425,9 @@ pureBuiltins =
     ,("str->lines", evalStringSplit (strToList lines))
     ,("words->str", evalStringMerge (listToStr unwords))
     ,("lines->str", evalStringMerge (listToStr unlines))
+    ,("round", evalRound)
+    ,("to-lower", evalToLower)
+    ,("to-upper", evalToUpper)
     ,("length", evalLength)
     ,("slice", evalSlice)
     ,("show", evalShow)
@@ -907,6 +911,31 @@ evalArith intOp realOp rootExpr@(WithMD exprMD _) operands = do
     lift (liftM (WithMD exprMD . ATOM . Real) (realOp $ fmap atomToDouble results))
   else
     lift (liftM (WithMD exprMD . ATOM . Integer) (intOp $ fmap atomToInteger results))
+
+evalRound :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
+evalRound rootExpr@(WithMD md _) = \case
+  [operand] -> do
+    modul  <- liftM getModule ask
+    result <- liftFromEither $ evalToNumber modul rootExpr operand
+    if isReal result
+    then
+      return $ WithMD md $ ATOM $ Integer (round $ atomToDouble result)
+    else
+      return $ WithMD md $ ATOM result
+  xs -> throwErr (Just rootExpr) $ "arity problem. expected 1 argument but got: " ++ show (length xs)
+
+evalToUpper, evalToLower :: Monad m => WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
+evalToUpper = evalCharManipulation C.toUpper
+evalToLower = evalCharManipulation C.toLower
+
+evalCharManipulation:: Monad m => (Char -> Char) -> WithMD Expr -> [WithMD Expr] -> Evaluation m Expr
+evalCharManipulation f rootExpr@(WithMD md _) = \case
+  [operand] -> do
+    result <- evalToString rootExpr operand
+    case result of
+      Right str -> lift $ return $ WithMD md $ ATOM $ String (map f str `P.using` P.parList P.rpar)
+      Left _ -> throwErr (Just rootExpr) "Type error. expression is not of type String."
+  xs -> throwErr (Just rootExpr) $ "arity problem. expected 1 argument but got: " ++ show (length xs)
 
 
 -- |evaluate '++' expression for lists and strings.

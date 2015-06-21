@@ -39,7 +39,7 @@ helpMsg :: String
 helpMsg = unlines (msg ++ displayCommands dashOpener usageMsg)
   where msg =
           [""
-          ,"Pureli interpreter version 0.4.0"
+          ,"Pureli interpreter version 0.4.1"
           ,""
           ,"Usage:"
           ]
