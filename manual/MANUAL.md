@@ -1,5 +1,13 @@
 Pureli Manual
-=========
+=============
+
+![(Pureλi)](pureli.png)
+
+
+Meet Pureli, a purely functional, dynamically typed, parallel evaluated, lisp like programming language.
+
+
+
 
 Built-in Procedures
 -------------------

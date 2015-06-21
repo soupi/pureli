@@ -72,7 +72,7 @@ multiLineExpr = go []
 welcomeMsg :: String
 welcomeMsg = unlines ["REPL for Pureli, a purely functional, dynamically typed,"
                      ,"Lisp-like programming language version 0.4.0"
-                     ,"Write an expression and press enter to evaluate, :help for help or :q to quit"]
+                     ,"Write an expression and press enter to evaluate, ,help for help or ,q to quit"]
 
 -- |
 -- a help message to be shown when user enters :help
@@ -84,9 +84,9 @@ helpMsg = unlines $ (["","  Available Commands:",""] ++) $ displayCommands space
 commandsDesc :: [(String, String)]
 commandsDesc =
   [(",help",  "Displays this help guide")
-  ,(",start", "Will read multiple lines expression until either :end or :trash")
-  ,(",end",   "Comes after :start and will evaluate the multiline expression")
-  ,(",trash", "Comes after :start and will throw away the multiline expression without evaluating")
+  ,(",start", "Will read multiple lines expression until either ,end or ,trash")
+  ,(",end",   "Comes after ,start and will evaluate the multiline expression")
+  ,(",trash", "Comes after ,start and will throw away the multiline expression without evaluating")
   ,(",reset", "Reset environment")
   ,(",q",     "Quit repl")]
 
