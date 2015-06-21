@@ -7,7 +7,6 @@
 module Pureli.Module (loadModule, requireToMod) where
 
 import Data.Maybe  (fromMaybe)
-import Data.Either (partitionEithers)
 import Control.Applicative ((<$>))
 import Control.Exception (IOException, catch)
 import qualified Control.Monad.Trans.Class as MT
@@ -107,7 +106,7 @@ getModuleFromFile fileName mName = do
       case lookupModule fileName mName modulDefs of
         Left err  -> MT.throwE (Error Nothing err)
         Right res -> do
-          MT.lift $ MT.modify $ M.insert (fileName, mName) $ Module fileName ";cycle" [] (M.fromList []) (M.fromList []) (M.fromList []) (M.fromList [])
+          MT.lift $ MT.modify $ M.insert (fileName, mName) $ Module fileName ";cycle" [] (M.fromList []) (M.fromList [])
           reqMods <- requiresToModules (modRequires res)
           modul   <- case fromDefToModule reqMods res of
             Left err -> MT.throwE (Error Nothing err)
@@ -124,19 +123,16 @@ getModuleFromFile fileName mName = do
 -- try to get a module from a ModuleDef
 fromDefToModule :: [Module] -> ModuleDef -> Either String Module
 fromDefToModule reqs def = do
-  (exposedDefs, exposedMacros) <-
+  exposedDefs <-
     case modExposes def of
-      Nothing      -> return (modDefs def, modMacros def)
-      Just exposes -> partitionEithers <$> which (modDefs def) (modMacros def) exposes
+      Nothing      -> return (modDefs def)
+      Just exposes -> which (modDefs def) exposes
   exportedDefs   <- filterListMap (map fst exposedDefs) (modDefs def)
-  exportedMacros <- filterListMap (map fst exposedMacros) (modMacros def)
   return
     Module { getModFile = modFile def
            , getModName = modName def
            , getModImports = reqs
-           , getModExports        = M.fromList exportedDefs
-           , getModExportedMacros = M.fromList exportedMacros
-           , getModMacros  = M.fromList $ modMacros def
+           , getModExports = M.fromList exportedDefs
            , getModEnv     = M.fromList $ modDefs def
            }
 
@@ -151,11 +147,9 @@ filterListMap (a:as) list = case lookup a list of
 
 -- |
 -- filter two assoc map from list
-which :: Eq a => [(a,b)] -> [(a,b)] -> [a] -> Either a [Either (a,b) (a,b)]
-which list1 list2 = mapM f
-  where f x = case maybeToEither x (Left . (,) x <$> lookup x list1) of
-                Right r -> Right r
-                Left  _ -> maybeToEither x (lookup x list2 >>= Just . Right . (,) x)
+which :: Eq a => [(a,b)] -> [a] -> Either a [(a,b)]
+which defs = mapM f
+  where f x = maybeToEither x ((,) x <$> lookup x defs)
 
 -- |
 -- converts a list of (Name, WithMD Expr) to Env. fails if there are duplicate names

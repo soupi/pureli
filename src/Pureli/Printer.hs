@@ -52,7 +52,7 @@ showAtom indent atom = getIndent indent ++ case atom of
   Bool True  -> "#t"
   Bool False -> "#f"
   Symbol  x  -> x
-  Keyword x  -> (':':x)
+  Keyword x  -> ':':x
 
 -- |convert an expression to a string.
 showExpr ::  Int -> Expr -> String
@@ -105,8 +105,6 @@ showModuleDef :: ModuleDef -> String
 showModuleDef modu = unlines
     ["(module " ++ show (modName modu) ++ ")"
     ,""
-    ,defs modMacros "defmacro"
-    ,""
     ,""
     ,defs modDefs "define"]
   where defs f k = unlines $ map (showDefine k) (f modu)
@@ -115,8 +113,6 @@ showModuleDef modu = unlines
 showModule :: Module -> String
 showModule modu = unlines
     ["(module " ++ show (getModName modu) ++ ")"
-    ,""
-    ,defs (M.toList . getModMacros) "defmacro"
     ,""
     ,""
     ,defs (M.toList . getModEnv) "define"]
@@ -131,6 +127,4 @@ showdataModule m =
   ,getModName
   ,show . fmap showdataModule . getModImports
   ,show . getModExports
-  ,show . getModExportedMacros
-  ,show . getModMacros
   ,show . getModEnv]

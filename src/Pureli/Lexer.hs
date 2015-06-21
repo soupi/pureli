@@ -14,7 +14,7 @@ lexer :: Tok.TokenParser ()
 lexer = Tok.makeTokenParser style
     where
         style = emptyDef { Tok.commentLine     = ";"
-                         , Tok.reservedNames   = ["nil", "defmacro", "define", "require", "module", "(define", "(require", "(module", "#t", "#f"]
+                         , Tok.reservedNames   = ["nil", "define", "require", "module", "(define", "(require", "(module", "#t", "#f"]
                          , Tok.caseSensitive   = True
                          , Tok.commentStart    = "{~"
                          , Tok.commentEnd      = "~}"

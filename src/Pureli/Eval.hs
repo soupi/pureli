@@ -98,11 +98,11 @@ changeBuiltins builtins state = state { getBuiltins = builtins }
 
 -- |an initial environment state
 initEvalState :: EvalState IO
-initEvalState = EvalState (Module "" "REPL" [] emptyEnv emptyEnv emptyEnv emptyEnv) builtinsIO
+initEvalState = EvalState replModule builtinsIO
 
 -- |an initial empty module for a repl
 replModule :: Module
-replModule =  Module "" "REPL" [] emptyEnv emptyEnv emptyEnv emptyEnv
+replModule =  Module "" "REPL" [] emptyEnv emptyEnv
 
 -- |empty Environment
 emptyEnv :: Env
@@ -211,7 +211,7 @@ evalAtom rootExpr@(WithMD md _) atom = do
 -- a Symbol is searched in environment and returned with it's env
 -- any other Atom is simply returned
 evalAtomOrSymbol :: Monad m => Module -> Env -> WithMD Expr -> Atom -> m (Module, WithMD Expr)
-evalAtomOrSymbol modul env (WithMD md _) atom = do
+evalAtomOrSymbol modul env (WithMD md _) atom =
   case atom of
     Symbol var -> case M.lookup var env of
       Just v  -> return (modul, v)

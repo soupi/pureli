@@ -25,7 +25,6 @@ data ModuleDef = ModuleDef { modFile       :: IO.FilePath
                            , modName       :: Name
                            , modExposes    :: Maybe [Name]
                            , modRequires   :: [Require]
-                           , modMacros     :: [(Name, WithMD Expr)]
                            , modDefs       :: [(Name, WithMD Expr)]
                            }
 
@@ -35,8 +34,6 @@ data Module = Module { getModFile           :: IO.FilePath
                      , getModName           :: Name
                      , getModImports        :: [Module]
                      , getModExports        :: Env
-                     , getModExportedMacros :: Env
-                     , getModMacros         :: Env
                      , getModEnv            :: Env } deriving (Eq, Generic)
 
 -- |

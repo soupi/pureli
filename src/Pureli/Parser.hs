@@ -8,7 +8,6 @@ module Pureli.Parser (parseExpr, parseFile, parseReqDefExp, getMDSource) where
 import Control.Applicative (pure, (<$>))
 
 import Data.Maybe  (fromMaybe)
-import Data.Either (partitionEithers)
 import Text.ParserCombinators.Parsec ((<|>))
 import qualified Text.Parsec as P
 import qualified Text.Parsec.String as P (Parser)
@@ -102,8 +101,8 @@ moduleDef :: P.Parser (WithMD ModuleDef)
 moduleDef = withMD $ do
   (fName, mName, exposes) <- modDef
   reqs <- requires
-  (regDefs, macroDefs) <- defines
-  return $ ModuleDef fName mName exposes reqs macroDefs regDefs
+  defs <- P.many1 define
+  return $ ModuleDef fName mName exposes reqs defs
 
 modDef :: P.Parser (P.SourceName, Name, Maybe [Name])
 modDef = do
@@ -174,27 +173,6 @@ argSymbol = do
     (Just rt, _      ) -> Symbol (rt:name)
     (_      , Just lt) -> Symbol (lt:name)
 
-defines :: P.Parser ([(Name, WithMD Expr)], [(Name, WithMD Expr)])
-defines = fmap partitionEithers go
-  where go = P.many1 df
-        df = fmap Left define <|> fmap Right defmacro
-
--- Macros
-
-defmacro :: P.Parser (Name, WithMD Expr)
-defmacro =  do
-  pos <- P.getPosition
-  L.reserved "(defmacro"
-  name <- L.identifier
-  expression <- P.many1 macroArgs
-  rparen
-  return (name, WithMD pos (LIST expression))
-
-macroArgs :: P.Parser (WithMD Expr)
-macroArgs = parensOrBrackets $ withMD $ do
-  WithMD argsMD args <- funArgs
-  body <- withMD expr
-  pure $ LIST [WithMD argsMD args, body]
 
 -- requires
 requires :: P.Parser [Require]
@@ -243,7 +221,7 @@ parseFile name input = case P.parse (P.many comments >> modules) name input of
   Left err  -> Left (show err)
   Right modefs ->
     flip mapM modefs (\modef ->
-      let dups = duplicates $ map fst (modMacros $ stripMD modef) ++ map fst (modDefs $ stripMD modef)
+      let dups = duplicates $ map fst (modDefs $ stripMD modef)
       in
         if   null dups
         then Right modef
