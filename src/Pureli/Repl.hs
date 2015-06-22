@@ -62,8 +62,8 @@ multiLineExpr = go []
   where go exps =
           HL.getInputLine "" >>= \case
             Nothing       -> go exps
-            Just ":end"   -> return $ concat $ reverse exps
-            Just ":trash" -> return []
+            Just ",end"   -> return $ concat $ reverse exps
+            Just ",trash" -> return []
             Just expr     -> go (expr:exps)
 
 
