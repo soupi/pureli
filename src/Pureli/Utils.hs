@@ -116,11 +116,14 @@ validArgs (x:xs) = case x of
 -- |
 -- list all modules
 listMods :: Int -> Module -> [String]
-listMods n modul =
+listMods _ _ = []
+
+listMods' :: Int -> Module -> [String]
+listMods' n modul =
   let m  = getModName modul
       ms = fmap ((replicate (n+2) ' ' ++) . getModName) (getModImports modul)
   in
-    ((replicate n ' ' ++ m) : ms ++ concatMap (listMods n) (getModImports modul))
+    ((replicate n ' ' ++ m) : ms ++ concatMap (listMods' n) (getModImports modul))
 
 
 displayCommands :: String -> [(String, String)] -> [String]
