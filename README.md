@@ -1,8 +1,9 @@
 Pureli
-=========
+======
+
+![(Pureli)](manual/pureli-light-small.png)
 
 A purely functional, dynamically typed, lisp-like toy programming language interpreter written in Haskell.
-
 
 Atomic Expressions
 ------------------
@@ -22,7 +23,8 @@ Built-in Procedures
 - Comparison (`=`, `<>`, `>`, `<`, `>=`, `<=`)
 - List operations (`list`, `car`, `cdr`)
 - List and String operations (`++`, `slice`, `length`)
-- List<->String operations (`str->lines`, `str->words`, `lines->str`, `words->str`)
+- String operations (`str->lines`, `str->words`, `lines->str`, `words->str`, `to-upper`, `to-lower`)
+- `round` operation on reals
 - `show` expression
 - `if` expression
 - `let` and `letrec`
@@ -171,3 +173,4 @@ Examples
 ```
 
 
+more examples at `examples/` and `tests/`.
