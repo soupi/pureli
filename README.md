@@ -5,6 +5,13 @@ Pureli
 
 A purely functional, dynamically typed, lisp-like toy programming language interpreter written in Haskell.
 
+HOWTO
+-----
+
+Read manual/HOWTO.md for information on how to run Pureli programs and REPL.
+
+Read manual/MANUAL.md for information about pureli and how to write pureli programs.
+
 Atomic Expressions
 ------------------
 
