@@ -204,15 +204,6 @@ This separation is useful for a number of things:
 - Testability
 - Freedom to parallelize!
 
-### List of Built-in IO Actions
-
-- `do!` sequence IO actions
-- - `let!` binds an IO result to a variable
-- - `read!` reads a line from the standard input
-- - `read-file!` reads a file
-- - `print!` writes a line to the standard output
-- - `print-file!` writes a string to a file
-- - `pure` raises a pure computation into IO context
 
 
 Built-in Procedures
@@ -232,8 +223,7 @@ Built-in Procedures
 - `error`, `try` and `trace`
 - `lambda` expression
 
-Built-in IO Actions
--------------------
+### Built-in IO Actions
 
 - `do!` sequence IO actions
 - `let!` binds an IO result to a variable
