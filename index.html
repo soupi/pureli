@@ -10,79 +10,114 @@
     <script src="javascripts/main.js"></script>
     <!--[if lt IE 9]>
       <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
-    <![endif]-->
-    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+      <![endif]-->
+      <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
 
   </head>
   <body>
 
-      <header>
-        <h1>Pureλi</h1>
-        <p>A purely functional, dynamically typed, parallel evaluated, lisp-like programming language</p>
-      </header>
+    <header>
+      <h1><img style="margin-top: -15px; margin-bottom: -22px; height: 80px" src="https://raw.githubusercontent.com/soupi/pureli/master/manual/assets/pureli-dark-transparent.png" alt="Pureli Logo"></h1>
+      <p>A purely functional, dynamically typed, parallel evaluated, lisp-like programming language</p>
+    </header>
 
-      <div id="banner">
-        <span id="logo"></span>
+    <div id="banner">
+      <span id="logo"></span>
 
-        <a href="https://github.com/soupi/pureli" class="button fork"><strong>View On GitHub</strong></a>
-        <div class="downloads">
-          <span>Downloads:</span>
-          <ul>
-            <li><a href="https://github.com/soupi/pureli/zipball/master" class="button">ZIP</a></li>
-            <li><a href="https://github.com/soupi/pureli/tarball/master" class="button">TAR</a></li>
-          </ul>
-        </div>
-      </div><!-- end banner -->
+      <a href="https://github.com/soupi/pureli" class="button fork"><strong>View On GitHub</strong></a>
+      <div class="downloads">
+        <span>Downloads:</span>
+        <ul>
+          <li><a href="https://github.com/soupi/pureli/zipball/master" class="button">ZIP</a></li>
+          <li><a href="https://github.com/soupi/pureli/tarball/master" class="button">TAR</a></li>
+        </ul>
+      </div>
+    </div><!-- end banner -->
 
     <div class="wrapper">
       <nav>
         <ul></ul>
       </nav>
       <section>
-        <h2>
-<a id="download" class="anchor" href="#download" aria-hidden="true"><span class="octicon octicon-link"></span></a>Download</h2>
 
-<ul>
-<li>Windows (Soon)</li>
-<li>Linux (Soon)</li>
-<li><a href="https://github.com/soupi/pureli/raw/master/downloads/OS_X/pureli">OS X</a></li>
-</ul>
+        <h2>Pureli is</h2>
 
-<h2>
-<a id="installation" class="anchor" href="#installation" aria-hidden="true"><span class="octicon octicon-link"></span></a>Installation</h2>
+        <div class="features">
+          <ul>
+            <li>
+              <h3>Pure</h3>
+              <p>Pureli enforces the separation of effectful and effectless code and disallows mutable state
+              </p>
+            </li>
+            <li>
+              <h3>Functional</h3>
+              <p>Loops and classes are replaced with recursion, modules and higher order functions
+              </p>
+            </li>
+            <li>
+              <h3>Parallel Evaluated</h3>
+              <p>Automatic parallelization of code deterministically and with no race conditions
+              </p>
+            </li>
+            <li>
+              <h3>Dynamically Typed</h3>
+              <p>The types of values are checked at runtime. Pureli can parallelize code without static analysis
+              </p>
+            </li>
+            <li>
+              <h3>Lisp</h3>
+              <p>Pureli's syntax is inherited from the long tradition of the LiSP family of programming languages
+              </p>
+            </li>
+          </ul>
+        </div>
 
-<p>From source:</p>
 
-<p>Install GHC 7.8.* and cabal and run the following commands:</p>
 
-<div class="highlight highlight-sh"><pre>git clone https://github.com/soupi/pureli
+
+        <h2><a id="download" class="anchor" href="#download" aria-hidden="true"><span class="octicon octicon-link"></span></a>Download</h2>
+
+      <ul>
+        <li>Windows (Soon)</li>
+        <li>Linux (Soon)</li>
+        <li><a href="https://github.com/soupi/pureli/raw/master/downloads/OS_X/pureli">OS X</a></li>
+      </ul>
+
+      <h2>
+        <a id="installation" class="anchor" href="#installation" aria-hidden="true"><span class="octicon octicon-link"></span></a>Installation</h2>
+
+      <p>From source:</p>
+
+      <p>Install GHC 7.8.* and cabal and run the following commands:</p>
+
+      <div class="highlight highlight-sh"><pre>git clone https://github.com/soupi/pureli
 <span class="pl-c1">cd</span> pureli
 cabal sandbox init
 cabal install</pre></div>
 
-<h2>
-<a id="howto" class="anchor" href="#howto" aria-hidden="true"><span class="octicon octicon-link"></span></a>HOWTO</h2>
+        <h2>
+          <a id="howto" class="anchor" href="#howto" aria-hidden="true"><span class="octicon octicon-link"></span></a>HOWTO</h2>
 
-<p>Read <a href="https://github.com/soupi/pureli/blob/master/manual/HOWTO.md">manual/HOWTO.md</a> for information on how to run Pureli programs and REPL.</p>
+        <p>Read <a href="https://github.com/soupi/pureli/blob/master/manual/HOWTO.md">manual/HOWTO.md</a> for information on how to run Pureli programs and REPL.</p>
 
-<p>Read <a href="https://github.com/soupi/pureli/blob/master/manual/MANUAL.md">manual/MANUAL.md</a> for information about pureli and how to write pureli programs.</p>
+        <p>Read <a href="https://github.com/soupi/pureli/blob/master/manual/MANUAL.md">manual/MANUAL.md</a> for information about pureli and how to write pureli programs.</p>
 
-<h2>
-<a id="examples" class="anchor" href="#examples" aria-hidden="true"><span class="octicon octicon-link"></span></a>Examples</h2>
+        <h2>
+          <a id="examples" class="anchor" href="#examples" aria-hidden="true"><span class="octicon octicon-link"></span></a>Examples</h2>
 
-<h3>
-<a id="hello-world" class="anchor" href="#hello-world" aria-hidden="true"><span class="octicon octicon-link"></span></a>Hello World</h3>
+        <h3>
+          <a id="hello-world" class="anchor" href="#hello-world" aria-hidden="true"><span class="octicon octicon-link"></span></a>Hello World</h3>
 
-<div class="highlight highlight-rkt"><pre>(<span class="pl-en">module</span> main)
+        <div class="highlight highlight-rkt"><pre>(<span class="pl-en">module</span> main)
 
 (<span class="pl-en">define</span> main
   (print! <span class="pl-c1">"<span class="pl-c1">Hello World!</span>"</span>))
-</pre></div>
+        </pre></div>
 
-<h3>
-<a id="echo" class="anchor" href="#echo" aria-hidden="true"><span class="octicon octicon-link"></span></a>Echo</h3>
+        <h3>
+          <a id="echo" class="anchor" href="#echo" aria-hidden="true"><span class="octicon octicon-link"></span></a>Echo</h3>
 
-<div class="highlight highlight-rkt"><pre><span class="pl-c">;The program will repeat anything the user writes until ^C</span>
+        <div class="highlight highlight-rkt"><pre><span class="pl-c">;The program will repeat anything the user writes until ^C</span>
 (<span class="pl-en">module</span> main)
 
 (<span class="pl-en">module</span> <span class="pl-c1">"<span class="pl-c1">stdlib/std.pli</span>"</span> std (bind!))
@@ -97,10 +132,10 @@ cabal install</pre></div>
           [go!]))])
       (go!)]))</pre></div>
 
-<h3>
-<a id="exponent" class="anchor" href="#exponent" aria-hidden="true"><span class="octicon octicon-link"></span></a>Exponent</h3>
+          <h3>
+            <a id="exponent" class="anchor" href="#exponent" aria-hidden="true"><span class="octicon octicon-link"></span></a>Exponent</h3>
 
-<div class="highlight highlight-rkt"><pre>(<span class="pl-en">module</span> main)
+          <div class="highlight highlight-rkt"><pre>(<span class="pl-en">module</span> main)
 
 (<span class="pl-en">require</span> <span class="pl-c1">"<span class="pl-c1">stdlib/std.pli</span>"</span> list)
 (<span class="pl-en">require</span> <span class="pl-c1">"<span class="pl-c1">stdlib/std.pli</span>"</span> std)
@@ -127,17 +162,17 @@ cabal install</pre></div>
       <span class="pl-c1">1</span>
       (* n (exponent n (- expn <span class="pl-c1">1</span>)))))</pre></div>
 
-<h3>
-<a id="unevaluated-parameters" class="anchor" href="#unevaluated-parameters" aria-hidden="true"><span class="octicon octicon-link"></span></a>Unevaluated parameters</h3>
+            <h3>
+              <a id="unevaluated-parameters" class="anchor" href="#unevaluated-parameters" aria-hidden="true"><span class="octicon octicon-link"></span></a>Unevaluated parameters</h3>
 
-<div class="highlight highlight-rkt"><pre>
+            <div class="highlight highlight-rkt"><pre>
 (<span class="pl-en">module</span> main)
 
 (<span class="pl-en">define</span> first-element (~x)
   (eval (car <span class="pl-c1">'x</span>)))
 
 (first-element (:hello (error <span class="pl-c1">"<span class="pl-c1">will not be thrown</span>"</span>)))
-</pre></div>
+            </pre></div>
       </section>
       <footer>
         <p>Project maintained by <a href="https://github.com/soupi">soupi</a></p>
@@ -145,6 +180,6 @@ cabal install</pre></div>
       </footer>
     </div>
     <!--[if !IE]><script>fixScale(document);</script><![endif]-->
-    
+
   </body>
 </html>
