@@ -1,0 +1,47 @@
+name:                Pureli
+version:             0.4.2
+synopsis:            A purely functional, dynamically typed, parallel interpreted, lisp-like programming language
+license:             BSD3
+license-file:        LICENSE
+author:              Gil Mizrahi
+Homepage:            https://github.com/soupi/pureli
+maintainer:          suppi@tutanota.com
+category:            Language
+build-type:          Simple
+
+-- Extra files to be distributed with the package, such as examples or a
+-- README.
+extra-source-files:
+  README.md
+
+data-files:
+  stdlib/*.pli
+
+
+cabal-version:       >=1.10
+
+executable pureli
+  main-is:             Main.hs
+  other-extensions:    LambdaCase
+  build-depends:
+     base >=4.7
+    ,containers >=0.5
+    ,parsec >=3.1
+    ,transformers >= 0.4
+    ,parallel
+    ,deepseq
+    ,generic-deriving
+    ,directory
+    ,filepath
+    ,haskeline
+
+  other-modules:
+    Paths_Pureli
+
+  hs-source-dirs:      src
+  default-language:    Haskell2010
+
+
+  ghc-options: -threaded -Wall -fwarn-tabs -funbox-strict-fields -O2
+               -rtsopts -eventlog -fno-warn-orphans -fno-warn-unused-do-bind
+
