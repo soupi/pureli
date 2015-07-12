@@ -10,169 +10,354 @@
     <script src="javascripts/main.js"></script>
     <!--[if lt IE 9]>
       <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
-      <![endif]-->
-      <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <![endif]-->
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
 
   </head>
   <body>
 
-    <header>
-      <h1><img style="margin-top: -15px; margin-bottom: -22px; height: 80px" src="https://raw.githubusercontent.com/soupi/pureli/master/manual/assets/pureli-dark-transparent.png" alt="Pureli Logo"></h1>
-      <p>A purely functional, dynamically typed, parallel evaluated, lisp-like programming language</p>
-    </header>
+      <header>
+        <h1>Pureλi</h1>
+        <p>A purely functional, dynamically typed, parallel evaluated, lisp-like programming language</p>
+      </header>
 
-    <div id="banner">
-      <span id="logo"></span>
+      <div id="banner">
+        <span id="logo"></span>
 
-      <a href="https://github.com/soupi/pureli" class="button fork"><strong>View On GitHub</strong></a>
-      <div class="downloads">
-        <span>Downloads:</span>
-        <ul>
-          <li><a href="https://github.com/soupi/pureli/zipball/master" class="button">ZIP</a></li>
-          <li><a href="https://github.com/soupi/pureli/tarball/master" class="button">TAR</a></li>
-        </ul>
-      </div>
-    </div><!-- end banner -->
+        <a href="https://github.com/soupi/pureli" class="button fork"><strong>View On GitHub</strong></a>
+        <div class="downloads">
+          <span>Downloads:</span>
+          <ul>
+            <li><a href="https://github.com/soupi/pureli/zipball/master" class="button">ZIP</a></li>
+            <li><a href="https://github.com/soupi/pureli/tarball/master" class="button">TAR</a></li>
+          </ul>
+        </div>
+      </div><!-- end banner -->
 
     <div class="wrapper">
       <nav>
         <ul></ul>
       </nav>
       <section>
+        <h2>
+<a id="quick-start" class="anchor" href="#quick-start" aria-hidden="true"><span class="octicon octicon-link"></span></a>Quick Start</h2>
 
-        <h2>Pureli is</h2>
+<h3>
+<a id="how-to-install" class="anchor" href="#how-to-install" aria-hidden="true"><span class="octicon octicon-link"></span></a>How To Install</h3>
 
-        <div class="features">
-          <ul>
-            <li>
-              <h3>Pure</h3>
-              <p>Pureli enforces the separation of effectful and effectless code and disallows mutable state
-              </p>
-            </li>
-            <li>
-              <h3>Functional</h3>
-              <p>Loops and classes are replaced with recursion, modules and higher order functions
-              </p>
-            </li>
-            <li>
-              <h3>Parallel Evaluated</h3>
-              <p>Automatic parallelization of code deterministically and with no race conditions
-              </p>
-            </li>
-            <li>
-              <h3>Dynamically Typed</h3>
-              <p>The types of values are checked at runtime. Pureli can parallelize code without static analysis
-              </p>
-            </li>
-            <li>
-              <h3>Lisp</h3>
-              <p>Pureli's syntax is inherited from the long tradition of the LiSP family of programming languages
-              </p>
-            </li>
-          </ul>
-        </div>
+<p>From source:</p>
 
+<p>Install GHC 7.8.* and cabal and run the following commands:</p>
 
-
-
-        <h2><a id="download" class="anchor" href="#download" aria-hidden="true"><span class="octicon octicon-link"></span></a>Download</h2>
-
-      <ul>
-        <li>Windows (Soon)</li>
-        <li>Linux (Soon)</li>
-        <li><a href="https://github.com/soupi/pureli/raw/master/downloads/OS_X/pureli">OS X</a></li>
-      </ul>
-
-      <h2>
-        <a id="installation" class="anchor" href="#installation" aria-hidden="true"><span class="octicon octicon-link"></span></a>Installation</h2>
-
-      <p>From source:</p>
-
-      <p>Install GHC 7.8.* and cabal and run the following commands:</p>
-
-      <div class="highlight highlight-sh"><pre>git clone https://github.com/soupi/pureli
+<div class="highlight highlight-sh"><pre>git clone https://github.com/soupi/pureli
 <span class="pl-c1">cd</span> pureli
 cabal sandbox init
 cabal install</pre></div>
 
-        <h2>
-          <a id="howto" class="anchor" href="#howto" aria-hidden="true"><span class="octicon octicon-link"></span></a>HOWTO</h2>
+<h3>
+<a id="how-to-run" class="anchor" href="#how-to-run" aria-hidden="true"><span class="octicon octicon-link"></span></a>How To Run</h3>
 
-        <p>Read <a href="https://github.com/soupi/pureli/blob/master/manual/HOWTO.md">manual/HOWTO.md</a> for information on how to run Pureli programs and REPL.</p>
+<h4>
+<a id="execution" class="anchor" href="#execution" aria-hidden="true"><span class="octicon octicon-link"></span></a>Execution</h4>
 
-        <p>Read <a href="https://github.com/soupi/pureli/blob/master/manual/MANUAL.md">manual/MANUAL.md</a> for information about pureli and how to write pureli programs.</p>
+<p>To run the pureli REPL, write:</p>
 
-        <h2>
-          <a id="examples" class="anchor" href="#examples" aria-hidden="true"><span class="octicon octicon-link"></span></a>Examples</h2>
+<div class="highlight highlight-sh"><pre>pureli</pre></div>
 
-        <h3>
-          <a id="hello-world" class="anchor" href="#hello-world" aria-hidden="true"><span class="octicon octicon-link"></span></a>Hello World</h3>
+<p>To run a pureli program, write:</p>
 
-        <div class="highlight highlight-rkt"><pre>(<span class="pl-en">module</span> main)
+<div class="highlight highlight-sh"><pre>pureli <span class="pl-k">&lt;</span>filepath<span class="pl-k">&gt;</span></pre></div>
 
-(<span class="pl-en">define</span> main
-  (print! <span class="pl-c1">"<span class="pl-c1">Hello World!</span>"</span>))
-        </pre></div>
+<h4>
+<a id="parallelism" class="anchor" href="#parallelism" aria-hidden="true"><span class="octicon octicon-link"></span></a>Parallelism</h4>
 
-        <h3>
-          <a id="echo" class="anchor" href="#echo" aria-hidden="true"><span class="octicon octicon-link"></span></a>Echo</h3>
+<p>To run with parallel execution, add <code>+RTS -N&lt;n&gt;</code> to the end of an execution command, where  is the number of core you would like to use</p>
 
-        <div class="highlight highlight-rkt"><pre><span class="pl-c">;The program will repeat anything the user writes until ^C</span>
-(<span class="pl-en">module</span> main)
+<p>Adding a <code>-s</code> flag will print run time information at the end of the execution.</p>
 
-(<span class="pl-en">module</span> <span class="pl-c1">"<span class="pl-c1">stdlib/std.pli</span>"</span> std (bind!))
+<h4>
+<a id="example" class="anchor" href="#example" aria-hidden="true"><span class="octicon octicon-link"></span></a>Example:</h4>
 
-(<span class="pl-en">define</span> main
-  (do!
-    [print! <span class="pl-c1">"<span class="pl-c1">echo program</span>"</span>]
-    [<span class="pl-en">letrec</span> ([go!
-      (<span class="pl-en">lambda</span> ()
-        (do!
-          [bind! (read!) print!]
-          [go!]))])
-      (go!)]))</pre></div>
+<div class="highlight highlight-sh"><pre>pureli examples/exponent.pli +RTS -N4 -s</pre></div>
 
-          <h3>
-            <a id="exponent" class="anchor" href="#exponent" aria-hidden="true"><span class="octicon octicon-link"></span></a>Exponent</h3>
+<p>Or</p>
 
-          <div class="highlight highlight-rkt"><pre>(<span class="pl-en">module</span> main)
+<div class="highlight highlight-sh"><pre>pureli examples/exponent.pli +RTS -N2</pre></div>
 
-(<span class="pl-en">require</span> <span class="pl-c1">"<span class="pl-c1">stdlib/std.pli</span>"</span> list)
-(<span class="pl-en">require</span> <span class="pl-c1">"<span class="pl-c1">stdlib/std.pli</span>"</span> std)
+<h2>
+<a id="pureli-manual" class="anchor" href="#pureli-manual" aria-hidden="true"><span class="octicon octicon-link"></span></a>Pureli Manual</h2>
 
+<p><img src="assets/pureli-light-small-transpar.png" alt="(Pureλi)"></p>
 
-(<span class="pl-en">define</span> main
-  (do!
-    (print! <span class="pl-c1">"<span class="pl-c1">calculating 2^10000 + 2^10001 + ... + 2^10030</span>"</span>)
-    (let! result (pure calculation))
-    (print! result)))
+<h2>
+<a id="introduction" class="anchor" href="#introduction" aria-hidden="true"><span class="octicon octicon-link"></span></a>Introduction</h2>
 
+<p>Pureli is a purely functional, dynamically typed, parallel evaluated, lisp-like programming language.
+These are all very big words, so let's analyze them one by one:</p>
 
-(<span class="pl-en">define</span> calculation
-  (list/reduce +
-    (list/map
-      (std/curry exponent <span class="pl-c1">2</span>)
-      (list/map +
-                (list/replicate <span class="pl-c1">30</span> <span class="pl-c1">10000</span>)
-                (list/range <span class="pl-c1">1</span> <span class="pl-c1">30</span>)))))
+<ul>
+<li>
+<strong>Pure</strong>: in Pureli, everything is immutable. Variables do not vary and it is not possible to destructively update data structures. Side Effects such as input and output are explicitly controlled by the programmer and can only happen in specific places.</li>
+<li>
+<strong>Functional</strong>: Pureli follows the functional programming paradigm. In Pureli there are no loops or classes, there are recursion, modules and higher order functions.</li>
+<li>
+<strong>Dynamically Typed</strong>: In Pureli, the types of values are checked at runtime. This makes code like this: <code>(if #t 1 "hello")</code> possible to run.</li>
+<li>
+<strong>Parallel Evaluated</strong>: In Pureli, arguments to functions in pure context can be evaluated (run) in parallel automatically.</li>
+<li>
+<strong>Lisp-like</strong>: Pureli's syntax is inherited from the long tradition of the LiSP familly of programming languages.</li>
+</ul>
 
+<p>We will continue to explore these qualities that makes Pureli interesting and unique in future chapters.</p>
 
-(<span class="pl-en">define</span> exponent (n expn)
-  (<span class="pl-en">if</span> (&lt;= expn <span class="pl-c1">0</span>)
-      <span class="pl-c1">1</span>
-      (* n (exponent n (- expn <span class="pl-c1">1</span>)))))</pre></div>
+<h2>
+<a id="out-of-the-frying-pan-and-into-the-fire" class="anchor" href="#out-of-the-frying-pan-and-into-the-fire" aria-hidden="true"><span class="octicon octicon-link"></span></a>Out of the Frying Pan and into the Fire</h2>
 
-            <h3>
-              <a id="unevaluated-parameters" class="anchor" href="#unevaluated-parameters" aria-hidden="true"><span class="octicon octicon-link"></span></a>Unevaluated parameters</h3>
+<p>Lets start by learning about Pureli's Atomic Expressions.</p>
 
-            <div class="highlight highlight-rkt"><pre>
+<h2>
+<a id="atomic-expressions" class="anchor" href="#atomic-expressions" aria-hidden="true"><span class="octicon octicon-link"></span></a>Atomic Expressions</h2>
+
+<p>Atomic expressions are expressions that cannot be evaluated any further. In Pureli, you can find:</p>
+
+<ul>
+<li>
+<strong>Integers</strong>: Arbitrarily big integers such as (<code>123</code>, <code>0</code>, <code>-55192293384175798123471</code>)</li>
+<li>
+<strong>Reals</strong>: Double-precision floating point numbers such as (<code>12.0</code>, <code>-51.5</code>, <code>0.01432</code>)</li>
+<li>
+<strong>Booleans</strong>: Boolean values: <code>#t</code> for true, <code>#f</code> for false. In Pureli every value other than <code>#f</code> is <code>#t</code>.</li>
+<li>
+<strong>Strings</strong>: Text strings such as (<code>"Hello world!"</code>, <code>"Pureλi is Great!"</code>)</li>
+<li>
+<strong>Symbols</strong>: Symbols are used as names for values and functions. (<code>x</code>, <code>lines-&gt;str</code>, <code>print!</code>) are symbols that evaluates to variables and functions.</li>
+<li>
+<strong>Keywords</strong>: Keywords are like Symbols, only that they always evaluated to themselves. They are useful for passing flags to functions or as keys for a dictionary. (<code>:hello</code>, <code>:x</code>, <code>:always-start-with-colons</code>)</li>
+<li>
+<strong>Nil</strong>: Nil is like <code>void</code>, <code>Unit</code> or <code>()</code> in other languages. (<code>nil</code>, <code>()</code>)</li>
+</ul>
+
+<h2>
+<a id="syntax" class="anchor" href="#syntax" aria-hidden="true"><span class="octicon octicon-link"></span></a>Syntax</h2>
+
+<p><img src="lisp_cycles.png" alt="Lisp"></p>
+
+<p>Pureli derives it's syntax from LiSP, a family of programming languages with similar syntax and attributes.</p>
+
+<p>LiSP, as it's name, is about List Processing. In lisp, everything is either an atomic expression or a list,
+which is denoted by parenthesis.</p>
+
+<p>For example:</p>
+
+<div class="highlight highlight-rkt"><pre>(<span class="pl-en">this</span> is a list)</pre></div>
+
+<p>Lists can be nested:</p>
+
+<div class="highlight highlight-rkt"><pre>(<span class="pl-en">this</span> is a (list inside (a list)))</pre></div>
+
+<p>Lisp uses polish notation. When evaluated, the first argument serves as a command and the rests are arguments:</p>
+
+<div class="highlight highlight-rkt"><pre>(+ <span class="pl-c1">32</span> <span class="pl-c1">1</span> <span class="pl-c1">942</span> <span class="pl-c1">444</span>)</pre></div>
+
+<p>Expressions can be nested as well:</p>
+
+<div class="highlight highlight-rkt"><pre>(+ <span class="pl-c1">32</span> <span class="pl-c1">1</span> <span class="pl-c1">942</span> (+ <span class="pl-c1">111</span> <span class="pl-c1">222</span> <span class="pl-c1">1</span> <span class="pl-c1">110</span>))</pre></div>
+
+<p>To stop an expressions from evaluating we use the command <code>quote</code>:</p>
+
+<div class="highlight highlight-rkt"><pre>(<span class="pl-en">quote</span> (+ <span class="pl-c1">2</span> <span class="pl-c1">2</span> <span class="pl-c1">3</span>)) <span class="pl-c">;; =&gt; '(+ 2 2 3)</span></pre></div>
+
+<p>It's result will be a data structure with these arguments, which can be evaluated using <code>eval</code>.</p>
+
+<div class="highlight highlight-rkt"><pre>(eval (<span class="pl-en">quote</span> (+ <span class="pl-c1">2</span> <span class="pl-c1">2</span> <span class="pl-c1">3</span>))) <span class="pl-c">;; =&gt; 7</span></pre></div>
+
+<p>Since the result of <code>quote</code> expression is a data structure, a list, we can use list operations such as
+<code>car</code>, <code>cdr</code>, and <code>++</code> to manipulate it:</p>
+
+<div class="highlight highlight-rkt"><pre>(eval (++ '(*) (cdr (<span class="pl-en">quote</span> (+ <span class="pl-c1">2</span> <span class="pl-c1">2</span> <span class="pl-c1">3</span>))))) <span class="pl-c">;; =&gt; 12</span></pre></div>
+
+<p><strong>In Pureli (and Lisp), code <strong>is</strong> data!</strong></p>
+
+<h2>
+<a id="defining-things" class="anchor" href="#defining-things" aria-hidden="true"><span class="octicon octicon-link"></span></a>Defining Things</h2>
+
+<p>We use <code>define</code> to bind names to expressions:</p>
+
+<div class="highlight highlight-rkt"><pre>(<span class="pl-en">define</span> x (+ <span class="pl-c1">1</span> <span class="pl-c1">2</span> <span class="pl-c1">3</span>))</pre></div>
+
+<p>We can create our own anonymous functions using <code>lambda</code>:</p>
+
+<div class="highlight highlight-rkt"><pre>((<span class="pl-en">lambda</span> (x y) (+ x y)) <span class="pl-c1">2</span> <span class="pl-c1">3</span>) <span class="pl-c">;; =&gt; 5</span></pre></div>
+
+<p>If we want to create a function and give it a name, we can use <code>define</code>:</p>
+
+<div class="highlight highlight-rkt"><pre>(<span class="pl-en">define</span> f
+  (<span class="pl-en">lambda</span> (x y) (+ x y)))</pre></div>
+
+<p>Or use another form of <code>define</code> which is just a syntactic sugar:</p>
+
+<div class="highlight highlight-rkt"><pre>(<span class="pl-en">define</span> f (x y)
+  (+ x y))</pre></div>
+
+<p><code>define</code> can only be used to introduce a name at the top level of a module, which will make it available to the entire module.</p>
+
+<p>For local definitions, We can use <code>let</code> and <code>letrec</code>:</p>
+
+<div class="highlight highlight-rkt"><pre>(<span class="pl-en">let</span> ([x <span class="pl-c1">5</span>] [y <span class="pl-c1">1</span>]) (+ x y)) <span class="pl-c">;; =&gt; 6</span>
+
+(<span class="pl-en">letrec</span> ([loop (<span class="pl-en">lambda</span> () (loop))]) (loop)) <span class="pl-c">;; =&gt; &lt;infinite-loop&gt;</span>
+
+(<span class="pl-en">let</span> ([loop (<span class="pl-en">lambda</span> () (loop))]) (loop)) <span class="pl-c">;; =&gt; error. cannot find x in environment</span></pre></div>
+
+<h3>
+<a id="unevaluated-parameters" class="anchor" href="#unevaluated-parameters" aria-hidden="true"><span class="octicon octicon-link"></span></a>Unevaluated parameters</h3>
+
+<p>It is also possible to define functions with receives unevaluated parameters</p>
+
+<div class="highlight highlight-rkt"><pre>
 (<span class="pl-en">module</span> main)
 
 (<span class="pl-en">define</span> first-element (~x)
   (eval (car <span class="pl-c1">'x</span>)))
 
-(first-element (:hello (error <span class="pl-c1">"<span class="pl-c1">will not be thrown</span>"</span>)))
-            </pre></div>
+  (first-element (:hello (error <span class="pl-c1">"<span class="pl-c1">will not be thrown</span>"</span>))) <span class="pl-c">;; =&gt; :hello</span>
+</pre></div>
+
+<p>Functions with Unevaluated parameters are useful when we want to expand the language
+and are Pureli's alternative for simple macros.</p>
+
+<h2>
+<a id="modules" class="anchor" href="#modules" aria-hidden="true"><span class="octicon octicon-link"></span></a>Modules</h2>
+
+<h3>
+<a id="definition" class="anchor" href="#definition" aria-hidden="true"><span class="octicon octicon-link"></span></a>Definition</h3>
+
+<p>It is possible to define multiple modules per file. In order to run a file, a 'main' module must be present.</p>
+
+<p>Syntax: <code>(module &lt;name&gt; ?(&lt;exported definitions&gt;))</code></p>
+
+<ul>
+<li>
+<code>(&lt;exported definitions&gt;)</code> will only export definitions listed. Optional.</li>
+</ul>
+
+<h3>
+<a id="requires" class="anchor" href="#requires" aria-hidden="true"><span class="octicon octicon-link"></span></a>Requires</h3>
+
+<p>It is possible to import a source file using the <code>require</code> keyword at the top of the module. Cyclic imports are currently not allowed.</p>
+
+<p>Syntax: <code>(require &lt;filepath&gt; &lt;module name&gt; ?(&lt;imported definitions&gt;) &lt;?new name&gt;)</code></p>
+
+<p>Or when required module is in the same file: <code>(module &lt;name&gt;)</code></p>
+
+<ul>
+<li>
+<code>(&lt;imported definitions&gt;)</code> will only imported definitions listed. Optional.</li>
+<li>
+<code>&lt;new name&gt;</code> will give the module a new name. Optional.</li>
+<li>A definition from a module can be accessed using <code>/</code>.</li>
+</ul>
+
+<h2>
+<a id="io" class="anchor" href="#io" aria-hidden="true"><span class="octicon octicon-link"></span></a>I/O</h2>
+
+<p>I/O handling in Pureli might be a bit different from what you are used to.
+Since most functions in pureli are pure, the cannot have side-effects.
+This means that you need to separate pure computations from impure computations in your code, this is how you do it:</p>
+
+<ul>
+<li>The entry point, <code>main</code> in the module <code>main</code>, starts as impure</li>
+<li>Chaining impure actions are done with <code>do!</code>
+</li>
+<li>Lifting a pure computation into impure context is done with <code>pure</code>
+</li>
+<li>
+<code>let!</code> is used to bind a result from impure context to a name</li>
+</ul>
+
+<p>Example:</p>
+
+<div class="highlight highlight-rkt"><pre>
+(<span class="pl-en">module</span> main)
+
+(<span class="pl-en">define</span> main
+  (do!
+    (print! <span class="pl-c1">"<span class="pl-c1">calculating the sum of 1, 2 and 3:</span>"</span>) <span class="pl-c">;; print! is impure</span>
+    (let! result (pure (+ <span class="pl-c1">1</span> <span class="pl-c1">2</span> <span class="pl-c1">3</span>))) <span class="pl-c">;; pure lifts (+ 1 2 3) into impure context and let! binds it to result</span>
+    (print! result))) <span class="pl-c">;; print! prints the result</span>
+</pre></div>
+
+<p>This separation is useful for a number of things:</p>
+
+<ul>
+<li>Separating concerns</li>
+<li>Safety from state changes</li>
+<li>Modularity</li>
+<li>Testability</li>
+<li>Freedom to parallelize!</li>
+</ul>
+
+<h2>
+<a id="built-in-procedures" class="anchor" href="#built-in-procedures" aria-hidden="true"><span class="octicon octicon-link"></span></a>Built-in Procedures</h2>
+
+<ul>
+<li>Arithmetic operations (<code>+</code>, <code>-</code>, <code>*</code>, <code>/</code>, <code>mod</code>)</li>
+<li>Tests (<code>zero?</code>, <code>empty?</code>, <code>nil?</code>, <code>number?</code>, <code>integer?</code>, <code>real?</code>, <code>list?</code>. <code>string?</code>, <code>procedure?</code>, <code>symbol?</code>, <code>keyword?</code>)</li>
+<li>Comparison (<code>=</code>, <code>&lt;&gt;</code>, <code>&gt;</code>, <code>&lt;</code>, <code>&gt;=</code>, <code>&lt;=</code>)</li>
+<li>List operations (<code>list</code>, <code>car</code>, <code>cdr</code>)</li>
+<li>List and String operations (<code>++</code>, <code>slice</code>, <code>length</code>)</li>
+<li>String operations (<code>str-&gt;lines</code>, <code>str-&gt;words</code>, <code>lines-&gt;str</code>, <code>words-&gt;str</code>, <code>to-upper</code>, <code>to-lower</code>)</li>
+<li>
+<code>round</code> operation on reals</li>
+<li>
+<code>show</code> expression</li>
+<li>
+<code>if</code> expression</li>
+<li>
+<code>let</code> and <code>letrec</code>
+</li>
+<li>
+<code>quote</code>, <code>eval</code> and <code>read-str</code>
+</li>
+<li>
+<code>error</code>, <code>try</code> and <code>trace</code>
+</li>
+<li>
+<code>lambda</code> expression</li>
+</ul>
+
+<h3>
+<a id="built-in-io-actions" class="anchor" href="#built-in-io-actions" aria-hidden="true"><span class="octicon octicon-link"></span></a>Built-in IO Actions</h3>
+
+<ul>
+<li>
+<code>do!</code> sequence IO actions</li>
+<li>
+<code>let!</code> binds an IO result to a variable</li>
+<li>
+<code>read!</code> reads a line from the standard input</li>
+<li>
+<code>read-file!</code> reads a file</li>
+<li>
+<code>print!</code> writes a line to the standard output</li>
+<li>
+<code>print-file!</code> writes a string to a file</li>
+<li>
+<code>pure</code> raises a pure computation into IO context</li>
+</ul>
+
+<h2>
+<a id="standard-library-modules" class="anchor" href="#standard-library-modules" aria-hidden="true"><span class="octicon octicon-link"></span></a>Standard Library Modules</h2>
+
+<ul>
+<li><code>std</code></li>
+<li><code>list</code></li>
+<li><code>bool</code></li>
+<li><code>numbers</code></li>
+<li><code>dict</code></li>
+</ul>
+
+<p>Use <code>(require "stdlib/std.pli" &lt;module-name&gt;)</code> to import modules from the standard library.</p>
       </section>
       <footer>
         <p>Project maintained by <a href="https://github.com/soupi">soupi</a></p>
@@ -180,6 +365,6 @@ cabal install</pre></div>
       </footer>
     </div>
     <!--[if !IE]><script>fixScale(document);</script><![endif]-->
-
+    
   </body>
 </html>

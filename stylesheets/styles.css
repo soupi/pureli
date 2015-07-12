@@ -689,7 +689,7 @@ header p {
 #banner {
   z-index: 100;
   left: 0;
-  right: 45%;
+  right: 50%;
   height: 50px;
   margin-right: -382px;
   position: fixed;
@@ -792,7 +792,7 @@ header p {
 }
 
 section {
-  width: 650px;
+  width: 590px;
   padding: 30px 30px 50px 30px;
   margin: 20px 0;
   margin-top: 190px;
@@ -1007,7 +1007,4 @@ footer {
     bottom: auto;
     width: auto;
   }
-}
-pre {
-  color: #c9c9c9;
 }
