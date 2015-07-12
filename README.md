@@ -1,9 +1,12 @@
 Pureli
 ======
 
-![(Pureli)](manual/pureli-light-small.png)
+![(Pureli)](manual/assets/pureli-light-small.png)
 
-A purely functional, dynamically typed, lisp-like toy programming language interpreter written in Haskell.
+A purely functional, dynamically typed, parallel evaluated Lisp-like programming language interpreter written in Haskell.
+
++ **Status**: Prototype
+
 
 Installation
 ------------
@@ -22,9 +25,9 @@ cabal install
 HOWTO
 -----
 
-Read manual/HOWTO.md for information on how to run Pureli programs and REPL.
+Read [manual/HOWTO.md](https://github.com/soupi/pureli/blob/master/manual/HOWTO.md) for information on how to run Pureli programs and REPL.
 
-Read manual/MANUAL.md for information about pureli and how to write pureli programs.
+Read [manual/MANUAL.md](https://github.com/soupi/pureli/blob/master/manual/MANUAL.md) for information about pureli and how to write pureli programs.
 
 Atomic Expressions
 ------------------
