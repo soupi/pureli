@@ -1,7 +1,7 @@
 Pureli Manual
 =============
 
-![(Pureλi)](assets/pureli-light-small.png)
+![(Pureλi)](assets/pureli-light-small-transpar.png)
 
 
 Introduction

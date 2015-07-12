@@ -1,7 +1,7 @@
 Pureli
 ======
 
-![(Pureli)](manual/assets/pureli-light-small.png)
+![(Pureli)](manual/assets/pureli-light-small-transpar.png)
 
 A purely functional, dynamically typed, parallel evaluated Lisp-like programming language interpreter written in Haskell.
 
