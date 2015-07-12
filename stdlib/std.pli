@@ -12,6 +12,21 @@
 
 (define trace-msg-id (msg x) (trace (++ msg " " (show x)) x))
 
+(define reverseList (xs)
+    (if (empty? xs)
+        xs
+        (++ (reverseList (cdr xs)) (list (car xs)))))
+
+
+(define flip (f &params)
+  (cond
+    ((empty? params)
+     (lambda (&p) (applyn flip (++ (list f) p))))
+    ((empty? (cdr params))
+     (lambda (&p) (apply f (reverseList (++ params p)))))
+    (#t
+     (apply f (reverseList params)))))
+
 (define compose (f g)
   (lambda (x) (f (g x))))
 
@@ -35,6 +50,10 @@
 
 (define applyn (~f xs)
   (eval (++ 'f xs)))
+
+(define curry (f &params)
+  (lambda (&xs)
+          (apply f (++ params xs))))
 
 ;;;;;;;;;;
 ;; List ;;
@@ -97,7 +116,7 @@
 (define range (low high)
   (if (>= low high)
       low
-      (list/cons low
+      (cons low
                  (range (+ low 1) high))))
 
 (define take (lst i)

@@ -1,0 +1,27 @@
+(module main)
+
+(require "stdlib/std.pli" list)
+(require "stdlib/std.pli" std)
+
+
+(define main
+  (do!
+    (print! "calculating 2^10000 + 2^10001 + ... + 2^10030")
+    (let! result (pure calculation))
+    (print! result)))
+
+
+(define calculation
+  (list/reduce +
+    (list/map
+      (std/curry exponent 2)
+      (list/map +
+                (list/replicate 30 10000)
+                (list/range 1 30)))))
+
+
+(define exponent (n expn)
+  (if (<= expn 0)
+      1
+      (* n (exponent n (- expn 1)))))
+
