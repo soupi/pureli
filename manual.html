@@ -206,7 +206,7 @@ cabal install</pre></div>
 
 (<span class="pl-en">letrec</span> ([loop (<span class="pl-en">lambda</span> () (loop))]) (loop)) <span class="pl-c">;; =&gt; &lt;infinite-loop&gt;</span>
 
-(<span class="pl-en">let</span> ([loop (<span class="pl-en">lambda</span> () (loop))]) (loop)) <span class="pl-c">;; =&gt; error. cannot find x in environment</span></pre></div>
+(<span class="pl-en">let</span> ([loop (<span class="pl-en">lambda</span> () (loop))]) (loop)) <span class="pl-c">;; =&gt; error. cannot find loop in environment</span></pre></div>
 
                                           <h3>
                                             <a id="unevaluated-parameters" class="anchor" href="#unevaluated-parameters" aria-hidden="true"><span class="octicon octicon-link"></span></a>Unevaluated parameters</h3>
