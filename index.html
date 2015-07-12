@@ -1,0 +1,142 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Pureλi by soupi</title>
+
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/github-dark.css">
+    <script src="javascripts/scale.fix.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="wrapper">
+      <header>
+        <h1>Pureλi</h1>
+        <p>A purely functional, dynamically typed, parallel evaluated, lisp-like programming language</p>
+        <p class="view"><a href="https://github.com/soupi/pureli">View the Project on GitHub <small>soupi/pureli</small></a></p>
+        <ul>
+          <li><a href="https://github.com/soupi/pureli/zipball/master">Download <strong>ZIP File</strong></a></li>
+          <li><a href="https://github.com/soupi/pureli/tarball/master">Download <strong>TAR Ball</strong></a></li>
+          <li><a href="https://github.com/soupi/pureli">View On <strong>GitHub</strong></a></li>
+        </ul>
+      </header>
+      <section>
+        <p><img src="https://raw.githubusercontent.com/soupi/pureli/master/manual/assets/pureli-light-small-transparent.png" alt="(Pureli)"></p>
+
+<p>Pureli is a purely functional, dynamically typed, parallel evaluated Lisp-like programming language.</p>
+
+<h2>
+<a id="download" class="anchor" href="#download" aria-hidden="true"><span class="octicon octicon-link"></span></a>Download</h2>
+
+<ul>
+<li>Windows (Soon)</li>
+<li>Linux (Soon)</li>
+<li>OS X (Soon)</li>
+</ul>
+
+<h2>
+<a id="installation" class="anchor" href="#installation" aria-hidden="true"><span class="octicon octicon-link"></span></a>Installation</h2>
+
+<p>From source:</p>
+
+<p>Install GHC 7.8.* and cabal and run the following commands:</p>
+
+<div class="highlight highlight-sh"><pre>git clone https://github.com/soupi/pureli
+<span class="pl-c1">cd</span> pureli
+cabal sandbox init
+cabal install</pre></div>
+
+<h2>
+<a id="howto" class="anchor" href="#howto" aria-hidden="true"><span class="octicon octicon-link"></span></a>HOWTO</h2>
+
+<p>Read <a href="https://github.com/soupi/pureli/blob/master/manual/HOWTO.md">manual/HOWTO.md</a> for information on how to run Pureli programs and REPL.</p>
+
+<p>Read <a href="https://github.com/soupi/pureli/blob/master/manual/MANUAL.md">manual/MANUAL.md</a> for information about pureli and how to write pureli programs.</p>
+
+<h2>
+<a id="examples" class="anchor" href="#examples" aria-hidden="true"><span class="octicon octicon-link"></span></a>Examples</h2>
+
+<h3>
+<a id="hello-world" class="anchor" href="#hello-world" aria-hidden="true"><span class="octicon octicon-link"></span></a>Hello World</h3>
+
+<div class="highlight highlight-rkt"><pre>(<span class="pl-en">module</span> main)
+
+(<span class="pl-en">define</span> main
+  (print! <span class="pl-c1">"<span class="pl-c1">Hello World!</span>"</span>))
+</pre></div>
+
+<h3>
+<a id="echo" class="anchor" href="#echo" aria-hidden="true"><span class="octicon octicon-link"></span></a>Echo</h3>
+
+<div class="highlight highlight-rkt"><pre><span class="pl-c">;The program will repeat anything the user writes until ^C</span>
+(<span class="pl-en">module</span> main)
+
+(<span class="pl-en">module</span> <span class="pl-c1">"<span class="pl-c1">stdlib/std.pli</span>"</span> std (bind!))
+
+(<span class="pl-en">define</span> main
+  (do!
+    [print! <span class="pl-c1">"<span class="pl-c1">echo program</span>"</span>]
+    [<span class="pl-en">letrec</span> ([go!
+      (<span class="pl-en">lambda</span> ()
+        (do!
+          [bind! (read!) print!]
+          [go!]))])
+      (go!)]))</pre></div>
+
+<h3>
+<a id="exponent" class="anchor" href="#exponent" aria-hidden="true"><span class="octicon octicon-link"></span></a>Exponent</h3>
+
+<div class="highlight highlight-rkt"><pre>(<span class="pl-en">module</span> main)
+
+(<span class="pl-en">require</span> <span class="pl-c1">"<span class="pl-c1">stdlib/std.pli</span>"</span> list)
+(<span class="pl-en">require</span> <span class="pl-c1">"<span class="pl-c1">stdlib/std.pli</span>"</span> std)
+
+
+(<span class="pl-en">define</span> main
+  (do!
+    (print! <span class="pl-c1">"<span class="pl-c1">calculating 2^10000 + 2^10001 + ... + 2^10030</span>"</span>)
+    (let! result (pure calculation))
+    (print! result)))
+
+
+(<span class="pl-en">define</span> calculation
+  (list/reduce +
+    (list/map
+      (std/curry exponent <span class="pl-c1">2</span>)
+      (list/map +
+                (list/replicate <span class="pl-c1">30</span> <span class="pl-c1">10000</span>)
+                (list/range <span class="pl-c1">1</span> <span class="pl-c1">30</span>)))))
+
+
+(<span class="pl-en">define</span> exponent (n expn)
+  (<span class="pl-en">if</span> (&lt;= expn <span class="pl-c1">0</span>)
+      <span class="pl-c1">1</span>
+      (* n (exponent n (- expn <span class="pl-c1">1</span>)))))</pre></div>
+
+<h3>
+<a id="unevaluated-parameters" class="anchor" href="#unevaluated-parameters" aria-hidden="true"><span class="octicon octicon-link"></span></a>Unevaluated parameters</h3>
+
+<div class="highlight highlight-rkt"><pre>
+(<span class="pl-en">module</span> main)
+
+(<span class="pl-en">define</span> first-element (~x)
+  (eval (car <span class="pl-c1">'x</span>)))
+
+(first-element (:hello (error <span class="pl-c1">"<span class="pl-c1">will not be thrown</span>"</span>)))
+</pre></div>
+      </section>
+    </div>
+    <footer>
+      <p>Project maintained by <a href="https://github.com/soupi">soupi</a></p>
+      <p>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></p>
+    </footer>
+    <!--[if !IE]><script>fixScale(document);</script><![endif]-->
+    
+  </body>
+</html>
