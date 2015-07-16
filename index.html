@@ -84,7 +84,7 @@
         <div class="highlight highlight-rkt"><pre><span class="pl-c">;The program will repeat anything the user writes until ^C</span>
 (<span class="pl-en">module</span> main)
 
-(<span class="pl-en">module</span> <span class="pl-c1">"<span class="pl-c1">stdlib/std.pli</span>"</span> std (bind!))
+(<span class="pl-en">module</span> <span class="pl-c1">"<span class="pl-c1">stdlib/std.pli</span>"</span> io (bind!))
 
 (<span class="pl-en">define</span> main
   (do!
@@ -92,7 +92,7 @@
     [<span class="pl-en">letrec</span> ([go!
       (<span class="pl-en">lambda</span> ()
         (do!
-          [bind! (read!) print!]
+          [io/bind! (read!) print!]
           [go!]))])
       (go!)]))</pre></div>
 
