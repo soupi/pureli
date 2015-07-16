@@ -115,6 +115,16 @@
 (<span class="pl-en">define</span> calculation
   (list/reduce +
     (list/map
+      (std/curry exponent <span class="pl-c1">2</span>)
+      (list/map +
+                (list/replicate <span class="pl-c1">30</span> <span class="pl-c1">10000</span>)
+                (list/range <span class="pl-c1">1</span> <span class="pl-c1">30</span>)))))
+
+
+(<span class="pl-en">define</span> exponent (n expn)
+  (<span class="pl-en">if</span> (&lt;= expn <span class="pl-c1">0</span>)
+      <span class="pl-c1">1</span>
+      (* n (exponent n (- expn <span class="pl-c1">1</span>)))))</pre></div>
 
 
       </section>
