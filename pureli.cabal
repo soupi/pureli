@@ -1,5 +1,5 @@
 name:                Pureli
-version:             0.4.2
+version:             0.4.3
 synopsis:            A purely functional, dynamically typed, parallel interpreted, lisp-like programming language
 license:             BSD3
 license-file:        LICENSE
@@ -34,6 +34,7 @@ executable pureli
     ,directory
     ,filepath
     ,haskeline
+    ,ansi-terminal
 
   other-modules:
     Paths_Pureli

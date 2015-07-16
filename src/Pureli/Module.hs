@@ -30,7 +30,7 @@ readModules filepath = do
                 `catch` (\(_ :: IOException) -> return $ Left $ show (e :: IOException))))
   case result of
     Left _ ->
-      MT.throwE (Error Nothing $ "Couldn't find file " ++ filepath)
+      MT.throwE (Error Nothing $ "Couldn't find file " ++ withYellow filepath)
     Right fileContent ->
       case parseFile filepath fileContent of
         Left err  -> MT.throwE (Error Nothing err)
@@ -58,7 +58,7 @@ cacheRequire modul@(Require mFile mName newName exposedDefs) =
     Just m  ->
       if getModName m == ";cycle"
         then
-          MT.throwE $ Error Nothing $ "cyclic require on module " ++ mName
+          MT.throwE $ Error Nothing $ "cyclic require on module " ++ withYellow mName
         else do
           let wantedDefs = case (\x -> (null x, x)) `fmap` exposedDefs of
                   Just (False, exDefs) -> M.fromList $ filter (\x -> fst x `elem` exDefs) (M.toList (getModEnv m))
@@ -157,7 +157,7 @@ envIfNoDups :: Monad m => Name -> Env -> MT.ExceptT Error m Env
 envIfNoDups mName env = do
   let dups = duplicates $ map fst (M.toList env)
   if not (null dups)
-  then MT.throwE $ Error Nothing $ "Duplicate definitions in module: " ++ mName ++ "\n*** " ++ show dups
+  then MT.throwE $ Error Nothing $ "Duplicate definitions in module: " ++ withYellow mName ++ withRed "\n*** " ++ show (map withBlue dups)
   else return env
 
 

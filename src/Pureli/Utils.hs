@@ -9,6 +9,7 @@ import qualified Control.Monad.Trans.Class  as MT
 import System.Info (os)
 import qualified System.FilePath.Posix   as P (takeDirectory, takeFileName)
 import qualified System.FilePath.Windows as W (takeDirectory, takeFileName)
+import qualified System.Console.ANSI as ANSI
 
 import Pureli.AST
 import Pureli.Printer()
@@ -28,8 +29,8 @@ data Error = Error (Maybe (WithMD Expr)) String
 -- |
 -- How to print errors.
 instance Show Error where
-  show (Error Nothing str) = "*** Error: " ++ str
-  show (Error (Just (WithMD md expr)) str) = "*** Error: " ++ show md ++ ": " ++ str ++ "\n*** In expression: " ++ show expr
+  show (Error Nothing str) = withRed "*** Error: " ++ str
+  show (Error (Just (WithMD md expr)) str) = withRed "*** Error: " ++ show md ++ ": " ++ str ++ withRed "\n***" ++ " In expression: " ++ withBlue (show expr)
 
 -- |
 -- utility to throw an expression.
@@ -134,7 +135,7 @@ cmdWithSpaces :: Int -> String -> String
 cmdWithSpaces n str = str ++ replicate (n - length str) ' '
 
 displayCommand :: String -> (String -> String) -> (String, String) -> String
-displayCommand opener paddCmd (cmd, desc) = opener ++ paddCmd cmd ++ desc
+displayCommand opener paddCmd (cmd, desc) = opener ++ withGreen (paddCmd cmd) ++ desc
 
 dashOpener, spaceOpener :: String
 dashOpener  = "  - "
@@ -175,3 +176,19 @@ wrapInLet binders body@(WithMD md _) =
 wrapInEval :: WithMD Expr -> WithMD Expr
 wrapInEval e@(WithMD md _) = WithMD md $ LIST [WithMD md $ ATOM $ Symbol "eval", e]
 
+-- Colors
+
+withColor :: ANSI.Color -> String -> String
+withColor color string = do
+  concat
+   [ANSI.setSGRCode [ANSI.SetColor ANSI.Foreground ANSI.Vivid color]
+   ,string
+   ,ANSI.setSGRCode [ANSI.Reset]
+   ]
+
+withRed, withBlue, withYellow, withGreen, withCyan :: String -> String
+withRed    = withColor ANSI.Red
+withBlue   = withColor ANSI.Blue
+withCyan   = withColor ANSI.Cyan
+withYellow = withColor ANSI.Yellow
+withGreen  = withColor ANSI.Green

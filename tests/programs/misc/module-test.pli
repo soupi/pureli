@@ -2,9 +2,10 @@
 
 (require "stdlib/std.pli" std (id))
 (require "stdlib/std.pli" list (elem))
+(require "stdlib/std.pli" bool (not))
 
 (define main
   (do!
     [print! (std/id "module loaded")]
-    [print! (list/elem 5 (list 1 2 3))]
+    [print! (bool/not (list/elem 5 (list 1 2 3)))]
     ))

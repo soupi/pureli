@@ -115,7 +115,7 @@ evalModule m =
   let modul = m { getModEnv = fmap (wrapInEnv modul) (getModEnv m) }
   in
     case M.lookup "main" (getModEnv modul) of
-      Nothing   -> throwE $ Error Nothing $ "No main function in program \n*** " ++ show (map fst (M.toList (getModEnv modul)))
+      Nothing   -> throwE $ Error Nothing $ "No main function in program\n" ++ withRed "*** " ++ show (map fst (M.toList (getModEnv modul)))
       Just expr@(WithMD md _) -> MT.runReaderT (eval $ WithMD md $ LIST [WithMD md $ ATOM $ Symbol "do!", expr]) (EvalState modul builtinsIO)
 
 
@@ -203,8 +203,8 @@ evalAtom rootExpr@(WithMD md _) atom = do
         Just (v, vMod) -> MT.withReaderT  (changeModule vMod) (eval v)
         Nothing -> case M.lookup var builtins of
           Nothing -> throwErr (Just rootExpr) $ case M.lookup var ioBuiltins of
-            Just _  -> "Cannot run IO action '" ++ var ++ "' in pure context."
-            Nothing -> "Could not find " ++ show var ++ " in environment: " ++ show (fst <$> M.toList env)
+            Just _  -> "Cannot run IO action '" ++ withYellow var ++ "' in pure context."
+            Nothing -> "Could not find " ++ withYellow var ++ " in environment: " ++ show (fst <$> M.toList env)
           Just _  -> return $ WithMD md $ ATOM $ Symbol var -- |^this will be handled later
     other -> return $ WithMD md (ATOM other)
 
@@ -232,7 +232,7 @@ evalOp exprWithMD (WithMD md operator:operands) = do
   case operator of
     -- |call the function
     (PROCEDURE _)     -> case M.lookup ";evalProcedure" builtins of -- |^evaluate Procedure in either context
-      Nothing -> throwErr (Just exprWithMD) "implementation bug: could no evaluate procedure. please report this"
+      Nothing -> throwErr (Just exprWithMD) $ withRed "implementation bug: could no evaluate procedure. please report this"
       Just ep -> ep (WithMD md operator) operands
     -- |evaluate the operator first and try again
     l@(LIST _)        -> evalOp exprWithMD . (:operands) =<< eval (WithMD md l)
@@ -240,7 +240,7 @@ evalOp exprWithMD (WithMD md operator:operands) = do
     (ATOM (Symbol s)) -> evalOpSymbol exprWithMD operands s
     (ENVEXPR m e)     -> MT.withReaderT (changeModule m) (eval e) >>= evalOp exprWithMD . (:operands)
     --(QUOTE e)         -> evalOp exprWithMD (e:operands) -- might not be appropriate, check
-    other             -> throwErr (Just exprWithMD) $ show other ++ " is not a function"
+    other             -> throwErr (Just exprWithMD) $ withYellow (show other) ++ " is not a function"
 
 
 -- |calls a function
@@ -369,8 +369,8 @@ evalOpSymbol exprWithMD operands name = do
       Nothing -> case M.lookup name builtins of
         Just op -> op exprWithMD operands
         Nothing -> case M.lookup name ioBuiltins of
-          Just _  -> throwErr (Just exprWithMD) $ "Cannot run IO action '" ++ name ++ "' in pure context."
-          Nothing -> throwErr (Just exprWithMD) $ " Could not find " ++ show name ++ " in environment: " ++ show (fst <$> M.toList env) ++ unlines ("": listMods 0 modul)
+          Just _  -> throwErr (Just exprWithMD) $ "Cannot run IO action '" ++ withYellow name ++ "' in pure context."
+          Nothing -> throwErr (Just exprWithMD) $ " Could not find " ++ withYellow name ++ " in environment: " ++ show (fst <$> M.toList env)
 
 
 -------------
@@ -460,7 +460,8 @@ pureContextBuiltins =
 ioBuiltins :: Builtins IO
 ioBuiltins = M.fromList [("pure",  evalPure)
                         ,("do!",    evalDo)
-                        ,("print!", evalPrint)
+                        ,("print!", evalPrint putStrLn)
+                        ,("display!", evalPrint putStr)
                         ,("read!",  evalRead)
                         ,("print-file!", evalPrintFile)
                         ,("read-file!",  evalReadFile)]
@@ -513,15 +514,15 @@ evalSequence rootExpr@(WithMD exprMD _) = \case
 
 
 -- |evaluate a 'print!' IO action
-evalPrint :: WithMD Expr -> [WithMD Expr] -> IOEval Expr
-evalPrint _ [expr@(WithMD md _)] = do
+evalPrint :: (String -> IO ()) -> WithMD Expr -> [WithMD Expr] -> IOEval Expr
+evalPrint display _ [expr@(WithMD md _)] = do
   modul <- liftM getModule ask
   let evalled = pureEval modul expr
   case evalled of
-    Right (WithMD _ (ATOM (String str))) -> lift (lift $ putStrLn str) >> returnIO (WithMD md $ ATOM Nil)
-    Right result                         -> lift (lift $ print result) >> returnIO (WithMD md $ ATOM Nil)
+    Right (WithMD _ (ATOM (String str))) -> lift (lift $ display str)           >> returnIO (WithMD md $ ATOM Nil)
+    Right result                         -> lift (lift $ display $ show result) >> returnIO (WithMD md $ ATOM Nil)
     Left  err                            -> lift $ MT.throwE err
-evalPrint expr xs = throwErr (Just expr) $ "bad arity, expected 1 argument, got: " ++ show (length xs)
+evalPrint _ expr xs = throwErr (Just expr) $ "bad arity, expected 1 argument, got: " ++ show (length xs)
 
 -- |evaluate a 'read!' IO action
 evalRead :: WithMD Expr -> [WithMD Expr] -> IOEval Expr
@@ -557,7 +558,7 @@ evalReadFile expr@(WithMD md _) [file] = do
       case result of
         Right x -> return x
         Left er -> throwErr (Just expr) er
-    _                                -> throwErr (Just eFile) "unexpected filepath"
+    _ -> throwErr (Just eFile) "unexpected filepath"
   returnIO $ WithMD md $ ATOM $ String input
 evalReadFile expr xs = throwErr (Just expr) $ "bad arity, expected 1 arguments, got: " ++ show (length xs)
 
@@ -1092,22 +1093,22 @@ liftFromEither = \case
 evalToNumber :: Module -> WithMD Expr -> WithMD Expr -> Either Error Atom
 evalToNumber modul rootExpr expr =
     case pureEval modul (wrapInEval expr) of
-      Right (WithMD _ (ATOM a)) -> if isNumber a then return a else Left $ Error (Just rootExpr) $ show a ++ " not a number"
-      Right _        -> Left $ Error (Just rootExpr) $ show expr ++ " not a number"
+      Right (WithMD _ (ATOM a)) -> if isNumber a then return a else Left $ Error (Just rootExpr) $ withYellow (show a) ++ " not a number"
+      Right _        -> Left $ Error (Just rootExpr) $ withYellow (show expr) ++ " not a number"
       Left x -> Left x
 
 -- |try to evaluate expression to a string
 evalToString :: Monad m => WithMD Expr -> WithMD Expr -> MT.ReaderT (EvalState m) (MT.ExceptT Error m) (Either Error String)
 evalToString rootExpr expr = eval (wrapInEval expr) >>= \case
   (WithMD _ (ATOM (String str))) -> lift $ return $ Right str
-  _ -> lift $ return $ Left $ Error (Just rootExpr) $ show expr ++ " is not a string"
+  _ -> lift $ return $ Left $ Error (Just rootExpr) $ withYellow (show expr) ++ " is not a string"
 
 -- |try to evaluate expression to a list
 evalToList :: Monad m => WithMD Expr -> WithMD Expr -> MT.ReaderT (EvalState m) (MT.ExceptT Error m) (Either Error [WithMD Expr])
 evalToList rootExpr expr =
   getEnvironment >>= (\(modul,env,_) -> tryEvalList modul env eval expr) >>= \case
     (WithMD _ (LIST list)) -> lift $ return $ Right list
-    _ -> lift $ return $ Left $ Error (Just rootExpr) $ show expr ++ " is not a list"
+    _ -> lift $ return $ Left $ Error (Just rootExpr) $ withYellow (show expr) ++ " is not a list"
 
 tryEvalList :: Monad m => Module -> Env -> (WithMD Expr -> m (WithMD Expr)) -> WithMD Expr -> m (WithMD Expr)
 tryEvalList modul env evalF expr = do
@@ -1122,10 +1123,10 @@ tryEvalList modul env evalF expr = do
 pureEvalToString :: Module -> WithMD Expr -> WithMD Expr -> Either Error String
 pureEvalToString modul rootExpr expr = pureEval modul (wrapInEval expr) >>= \case
   (WithMD _ (ATOM (String str))) -> Right str
-  _ -> Left $ Error (Just rootExpr) $ show expr ++ " is not a string"
+  _ -> Left $ Error (Just rootExpr) $ withYellow (show expr) ++ " is not a string"
 
 -- |try to evaluate expression to a list
 pureEvalToList :: Module -> WithMD Expr -> WithMD Expr -> Either Error [WithMD Expr]
 pureEvalToList modul rootExpr expr = tryEvalList modul (getModEnv modul) (pureEval modul) expr >>= \case
   (WithMD _ (LIST list)) -> Right list
-  _ -> Left $ Error (Just rootExpr) $ show expr ++ " is not a list"
+  _ -> Left $ Error (Just rootExpr) $ withYellow (show expr) ++ " is not a list"

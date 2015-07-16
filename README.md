@@ -157,7 +157,7 @@ Examples
 ;The program will repeat anything the user writes until ^C
 (module main)
 
-(module "stdlib/std.pli" std (bind!))
+(module "stdlib/std.pli" io (bind!))
 
 (define main
   (do!
@@ -165,7 +165,7 @@ Examples
     [letrec ([go!
       (lambda ()
         (do!
-          [bind! (read!) print!]
+          [io/bind! (read!) print!]
           [go!]))])
       (go!)]))
 ```

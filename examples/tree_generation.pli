@@ -5,14 +5,14 @@
 (module main)
 
 ;; requires
-(require "stdlib/std.pli" std (bind!))
+(require "stdlib/std.pli" io (bind!))
 (require logic)
 
 ;; entry point
 (define main
   (do!
     (print! welcome-msg)
-    (let! input (std/bind! (read!) (lambda (input) (pure (logic/evaluate-input input)))))
+    (let! input (io/bind! (read!) (lambda (input) (pure (logic/evaluate-input input)))))
     (print! "")
     (let ([size (car input)] [trunk (car (cdr input))] [leaf (car (cdr (cdr input)))])
          (print! (logic/calculate-tree size trunk leaf)))))

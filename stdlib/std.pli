@@ -28,12 +28,7 @@
      (apply f (reverseList params)))))
 
 (define compose (f g)
-  (lambda (x) (f (g x))))
-
-(define bind! (m f)
-    (do!
-      [let! x m]
-      [f x]))
+  (lambda (&xs) (f (apply g xs))))
 
 (define cond ~params
   (letrec ((cond-helper
@@ -52,8 +47,32 @@
   (eval (++ 'f xs)))
 
 (define curry (f &params)
-  (lambda (&xs)
+  (lambda xs
           (apply f (++ params xs))))
+
+
+;;;;;;;;;;
+;;  IO  ;;
+;;;;;;;;;;
+
+
+(module io)
+
+
+(define bind! (m f)
+    (do!
+      [let! x m]
+      [f x]))
+
+(define sequence! (xs)
+  (if (empty? xs)
+      (pure (list))
+      (do!
+        (let! y (car xs))
+        (let! ys (sequence! (cdr xs)))
+        (pure (++ (list y) ys)))))
+
+
 
 ;;;;;;;;;;
 ;; List ;;
@@ -344,13 +363,42 @@
           (or-helper (cdr params)))))
 
 
+;;;;;;;;;;
+;; Test ;;
+;;;;;;;;;;
+
+(module testing (assert assert!))
+
+(require std)
+(require io)
+(require bool)
+(require list)
+
+(define assert ~params
+  (assert-helper 'params))
+
+(define assert-helper (params)
+  (if (empty? params)
+      (list "Tests OK")
+      (if (bool/not (eval (car (car params))))
+          (list "Test Failed: " (eval (car (cdr (car params)))) "\n")
+          (assert-helper (cdr params)))))
+
+(define assert! ~params
+  (do!
+    (io/sequence!
+      (list/map display! (++ (assert-helper 'params) (list "\n"))))
+    (pure nil)))
+
+
 ;;;;;;;;;;;
 ;; Tests ;;
 ;;;;;;;;;;;
 
-(module main)
+(module test)
 
 (require std)
+(require io)
 (require list)
 (require bool)
 (require dict)
@@ -407,7 +455,7 @@
 (define test-bind! ()
   (do!
     [print! "test bind. expected result: #t"]
-    [std/bind! (pure #t) print!]))
+    [io/bind! (pure #t) print!]))
 
 
 ;;;
