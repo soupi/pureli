@@ -21,6 +21,7 @@ run :: [String] -> IO ()
 run = \case
     []          -> runRepl -- |^run repl
     ["--help"]  -> putStrLn helpMsg -- |^print help message
+    ["--version"] -> putStrLn $ versionMsg
     ("--test":file:argv) -> runModule "test" file argv
     (file:argv) -> runModule "main" file argv
 
@@ -42,16 +43,20 @@ helpMsg :: String
 helpMsg = unlines (msg ++ displayCommands dashOpener usageMsg)
   where msg =
           [""
-          ,withCyan "Pureli " ++ "interpreter version 0.4.3"
+          ,versionMsg
           ,""
           ,"Usage:"
           ]
+
+versionMsg :: String
+versionMsg = withCyan "Pureli " ++ "interpreter version 0.5.0"
 
 usageMsg :: [(String, String)]
 usageMsg =
     [("pureli", "Runs the read-eval-print loop")
     ,("pureli <file>", "Interprets and runs a source file with main/main as entry point")
     ,("pureli --test <file>", "Interprets and runs a source file with test/main as entry point")
-    ,("pureli --help", "Show this help message")
+    ,("pureli --version", "Shows the version of the interpreter")
+    ,("pureli --help", "Shows this help message")
     ]
 

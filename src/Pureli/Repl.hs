@@ -78,7 +78,7 @@ multiLineExpr = go []
 -- a welcome message to be shown when starting the REPL
 welcomeMsg :: String
 welcomeMsg = unlines ["REPL for " ++ withCyan "Pureli" ++ ", a purely functional, dynamically typed,"
-                     ,"Lisp-like programming language version 0.4.3"
+                     ,"Lisp-like programming language version 0.5.0"
                      ,"Write an expression and press enter to evaluate, " ++ withGreen ",help" ++ " for help or " ++ withGreen ",q" ++ " to quit"]
 
 -- |
