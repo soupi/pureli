@@ -378,11 +378,15 @@
   (assert-helper 'params))
 
 (define assert-helper (params)
-  (if (empty? params)
-      (list "Tests OK")
-      (if (bool/not (eval (car (car params))))
-          (list "Test Failed: " (eval (car (cdr (car params)))) "\n")
-          (assert-helper (cdr params)))))
+  (std/cond
+    ((empty? params) (list "Tests OK"))
+
+    ((<> 2 (length (car params))) (error "invalid structure"))
+
+    ((bool/not (eval (car (car params))))
+     (list "Test Failed: " (eval (car (cdr (car params)))) "\n"))
+
+    (#t (assert-helper (cdr params)))))
 
 (define assert! ~params
   (do!
