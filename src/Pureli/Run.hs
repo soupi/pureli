@@ -49,7 +49,7 @@ helpMsg = unlines (msg ++ displayCommands dashOpener usageMsg)
           ]
 
 versionMsg :: String
-versionMsg = withCyan "Pureli " ++ "interpreter version 0.5.0"
+versionMsg = withCyan "Pureli " ++ "interpreter version 0.5.1"
 
 usageMsg :: [(String, String)]
 usageMsg =

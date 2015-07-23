@@ -1,6 +1,7 @@
 
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 -- |
 -- Create a module before evaluation
@@ -20,6 +21,13 @@ import Pureli.Parser
 import Pureli.Printer()
 
 import Paths_Pureli (getDataFileName)
+import Data.FileEmbed (embedDir)
+import qualified Data.ByteString.Char8 as BS
+import Data.List (stripPrefix)
+
+
+stdDir :: [(FilePath, BS.ByteString)]
+stdDir = $(embedDir "stdlib")
 
 -- |
 -- read module definitions from file
@@ -27,7 +35,10 @@ readModules :: (MT.MonadTrans t, Monad (t IO)) =>FilePath -> MT.ExceptT Error (t
 readModules filepath = do
   result <- MT.lift $ MT.lift ((Right <$> readFile filepath)
               `catch` (\e -> (Right <$> (readFile =<< getDataFileName filepath))
-                `catch` (\(_ :: IOException) -> return $ Left $ show (e :: IOException))))
+                `catch` (\(_ :: IOException) ->
+                  case stripPrefix "stdlib/" filepath >>= flip lookup stdDir of
+                    Just bs -> return $ return $ BS.unpack bs
+                    Nothing -> return $ Left $ show (e :: IOException))))
   case result of
     Left _ ->
       MT.throwE (Error Nothing $ "Couldn't find file " ++ withYellow filepath)
