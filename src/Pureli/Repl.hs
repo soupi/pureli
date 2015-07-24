@@ -58,7 +58,7 @@ repl modul = do
     Just ",env"   -> HL.outputStrLn (unlines $ listMods 0 modul) >> repl modul
     Just ",clear" -> lift ANSI.clearScreen  >> repl modul
     Just ",q"     -> return ()
-    Just c@(',':_)-> HL.outputStrLn ("*** Error: " ++ c ++ " unknown command.") >> repl modul
+    Just c@(',':_)-> HL.outputStrLn (withRed "*** Error: " ++ withYellow c ++ " unknown command.") >> repl modul
     Just expr     -> repl =<< runExpr modul expr
     Nothing       -> return ()
 
