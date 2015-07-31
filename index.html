@@ -126,11 +126,45 @@
       <span class="pl-c1">1</span>
       (* n (exponent n (- expn <span class="pl-c1">1</span>)))))</pre></div>
 
+
+
+          <h3>
+            <a id="pureli-repl" class="anchor" href="#pureli-repl" aria-hidden="true"><span class="octicon octicon-link"></span></a>A Pureli REPL</h3>
+
+<div class="highlight highlight-rkt"><pre>(<span class="pl-en">module</span> main)
+
+(<span class="pl-en">define</span> main
+  (do!
+    (print! <span class="pl-c1">"<span class="pl-c1">Pureli REPL made in Pureli</span>"</span>)
+    (repl)))
+
+(<span class="pl-en">define</span> repl ()
+  (do!
+    (let! input (read!))
+    (display! <span class="pl-c1">"<span class="pl-c1">=&gt; </span>"</span>)
+    (let! result
+          (try (pure (eval (read-str input)))
+               (eval (read-str input))
+               (pure <span class="pl-c1">"<span class="pl-c1">Error in expression</span>"</span>)))
+    (<span class="pl-en">if</span>
+      (nil? result)
+      (pure nil)
+      (print! result))
+    (repl)))</pre></div>
+
+
+
+        <h2>
+          <a id="video" class="anchor" href="#video" aria-hidden="true"><span class="octicon octicon-link"></span></a>Video</h2>
+
         <h3>
-          <a id="video" class="anchor" href="#video" aria-hidden="true"><span class="octicon octicon-link"></span></a>Workflow Demonstration</h3>
+          <a id="workflow" class="anchor" href="#workflow" aria-hidden="true"><span class="octicon octicon-link"></span></a>Workflow Demonstration</h3>
         <div>
           <iframe width="620" height="488" src="https://www.youtube.com/embed/rsYHRPqk-2U" frameborder="0" allowfullscreen></iframe>
         </div>
+
+
+
 
       </section>
       <footer>
