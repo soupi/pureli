@@ -175,7 +175,7 @@ cabal install</pre></div>
 
                               <div class="highlight highlight-rkt"><pre>(eval (++ '(*) (cdr (<span class="pl-en">quote</span> (+ <span class="pl-c1">2</span> <span class="pl-c1">2</span> <span class="pl-c1">3</span>))))) <span class="pl-c">;; =&gt; 12</span></pre></div>
 
-                                <p><strong>In Pureli (and Lisp), code <strong>is</strong> data!</strong></p>
+                                <p><strong>In Pureli (and Lisp), code <i>is</i> data!</strong></p>
 
                                 <h2>
                                   <a id="defining-things" class="anchor" href="#defining-things" aria-hidden="true"><span class="octicon octicon-link"></span></a>Defining Things</h2>
@@ -213,14 +213,23 @@ cabal install</pre></div>
 
                                           <p>It is also possible to define functions with receives unevaluated parameters</p>
 
-                                          <div class="highlight highlight-rkt"><pre>
-(<span class="pl-en">module</span> main)
 
-(<span class="pl-en">define</span> first-element (~x)
-  (eval (car <span class="pl-c1">'x</span>)))
+<div class="highlight highlight-rkt"><pre>(<span class="pl-en">module</span> main)
 
-  (first-element (:hello (error <span class="pl-c1">"<span class="pl-c1">will not be thrown</span>"</span>))) <span class="pl-c">;; =&gt; :hello</span>
-                                          </pre></div>
+(<span class="pl-en">define</span> <span class="pl-en">unless</span> (test ~true-branch ~false-branch)
+  (<span class="pl-en">if</span>
+    test
+    false-branch
+    true-branch))
+
+(<span class="pl-en">define</span> main
+  (print!
+    (<span class="pl-en">unless</span>
+      <span class="pl-c1">#t</span>
+      (error <span class="pl-c1">"<span class="pl-c1">not thrown</span>"</span>)
+      (+ <span class="pl-c1">1</span> <span class="pl-c1">1</span>)))) <span class="pl-c">;; =&gt; 2</span>
+</pre></div>
+
 
                                           <p>Functions with Unevaluated parameters are useful when we want to expand the language
                                           and are Pureli's alternative for simple macros.</p>
@@ -338,7 +347,9 @@ cabal install</pre></div>
                                             <li>
                                               <code>read-file!</code> reads a file</li>
                                             <li>
-                                              <code>print!</code> writes a line to the standard output</li>
+                                              <code>print!</code> writes to the standard output with newline</li>
+                                            <li>
+                                              <code>display!</code> writes to the standard output without newline</li>
                                             <li>
                                               <code>print-file!</code> writes a string to a file</li>
                                             <li>
@@ -358,6 +369,10 @@ cabal install</pre></div>
 
                                           <p>Use <code>(require "stdlib/std.pli" &lt;module-name&gt;)</code> to import modules from the standard library.</p>
 
+                                          <h2>
+                                            <a id="examples" class="anchor" href="#examples" aria-hidden="true"><span class="octicon octicon-link"></span></a>Examples</h2>
+
+                                          <p>Code examples for Pureli can be found <a href="https://github.com/soupi/pureli/tree/master/examples">here</a>.</p>
 
 
       </section>
