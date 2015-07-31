@@ -127,10 +127,10 @@ repository:
           (?x)
           						(?<=(\\(|\\[)) # preceded by ( or \[
           						(
-          						  do|let|print|read|print-file|read-file
+          						  do|let|print|display|read|print-file|read-file
           						)
           						(!)			# name ends with ! sign
-          						(?=(\\s|\\()) # followed by space or (
+          						(?=(\\s|\\(|\\))) # followed by space or (
 
         '''
         name: "support.function.with-side-effects.pureli"

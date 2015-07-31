@@ -1,0 +1,16 @@
+(module main)
+
+
+(define unless (test ~true-branch ~false-branch)
+  (if
+    test
+    false-branch
+    true-branch))
+
+
+(define main
+  (print!
+    (unless
+      #t
+      (error "not thrown")
+      (+ 1 1)))) ;; => 2

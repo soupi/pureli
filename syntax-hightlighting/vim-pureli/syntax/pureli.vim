@@ -1,4 +1,5 @@
 " Vim syntax file
+" modified from a Racket syntax file (http://github.com/wlangstroth/vim-racket.git) and adjusted for pureli
 " Language:     Pureli 0.0.1
 
 " Initializing:
@@ -31,7 +32,7 @@ syn keyword pureliSyntax define defmacro
 syn keyword pureliSyntax #%top-interaction
 
 " 12.5 Writing
-syn keyword pureliSyntax print! print-file! read! read-file! do! let! pure
+syn keyword pureliSyntax print! print-file! read! read-file! do! let! pure display!
 
 " lambda sign
 syn match pureliSyntax /\<[\u03bb]\>/

@@ -11,5 +11,9 @@
 (define run (input-file output-file)
   (do!
     (let! input-text (read-file! input-file))
-    (let ([output-text (lines->str (list/fmap words->str (list/fmap str->words (str->lines input-text))))])
+    (let ([output-text (lines->str
+                         (list/fmap words->str
+                                    (list/fmap
+                                        str->words
+                                       (str->lines input-text))))])
       (print-file! output-file output-text))))

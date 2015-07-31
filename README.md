@@ -5,7 +5,9 @@ Pureli
 
 A purely functional, dynamically typed, parallel evaluated Lisp-like programming language interpreter written in Haskell.
 
-+ **Status**: Prototype
+[Website](http://soupi.github.io/pureli)
+
+> **Status**: Prototype
 
 
 Installation
@@ -25,9 +27,7 @@ cabal install
 HOWTO
 -----
 
-Read [manual/HOWTO.md](https://github.com/soupi/pureli/blob/master/manual/HOWTO.md) for information on how to run Pureli programs and REPL.
-
-Read [manual/MANUAL.md](https://github.com/soupi/pureli/blob/master/manual/MANUAL.md) for information about pureli and how to write pureli programs.
+Read [The Manual](http://soupi.github.io/pureli/manual.html) for information about pureli and how to write pureli programs.
 
 Atomic Expressions
 ------------------
@@ -63,7 +63,8 @@ Built-in IO Actions
 - `let!` binds an IO result to a variable
 - `read!` reads a line from the standard input
 - `read-file!` reads a file
-- `print!` writes a line to the standard output
+- `print!` writes to the standard output with newline
+- `display!` writes to the standard output without newline
 - `print-file!` writes a string to a file
 - `pure` raises a pure computation into IO context
 
@@ -94,10 +95,20 @@ It is also possible to define functions with receives unevaluated parameters
 
 (module main)
 
-(define first-element (~x)
-  (eval (car 'x)))
 
-(first-element (:hello (error "will not be thrown")))
+(define unless (test ~true-branch ~false-branch)
+  (if
+    test
+    false-branch
+    true-branch))
+
+
+(define main
+  (print!
+    (unless
+      #t
+      (error "not thrown")
+      (+ 1 1)))) ;; => 2
 
 ```
 
@@ -197,4 +208,4 @@ Examples
 ```
 
 
-more examples at `examples/` and `tests/`.
+More examples at `examples/` and `tests/`.
