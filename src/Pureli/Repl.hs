@@ -21,7 +21,7 @@ import Pureli.Eval
 runRepl :: IO ()
 runRepl = do
   putStrLn welcomeMsg
-  HL.runInputT HL.defaultSettings (repl replModule) -- |^run repl
+  HL.runInputT HL.defaultSettings (repl replModule) -- run repl
   putStrLn (unlines ["","Goodbye."])
 
 -- |

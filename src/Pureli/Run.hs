@@ -16,15 +16,17 @@ import Pureli.Eval
 import Pureli.Repl
 
 -- |
--- interprets a file or runs the REPL depending on the number of arguments
+-- Interprets a file or runs the REPL depending on the number of arguments
 run :: [String] -> IO ()
 run = \case
-    []          -> runRepl -- |^run repl
-    ["--help"]  -> putStrLn helpMsg -- |^print help message
+    []          -> runRepl -- run repl
+    ["--help"]  -> putStrLn helpMsg -- print help message
     ["--version"] -> putStrLn $ versionMsg
     ("--test":file:argv) -> runModule "test" file argv
     (file:argv) -> runModule "main" file argv
 
+-- |
+-- Interprets a file and run a selected module in it
 runModule :: Name -> FilePath -> [String] -> IO ()
 runModule mName file argv = do
   let args = WithMD emptyMeta $ QUOTE $ WithMD emptyMeta $ LIST $ fmap (WithMD emptyMeta . ATOM . String) argv
@@ -39,6 +41,8 @@ runModule mName file argv = do
     Left err                -> print err
     Right _ -> return ()
 
+-- |
+-- A help message to display users
 helpMsg :: String
 helpMsg = unlines (msg ++ displayCommands dashOpener usageMsg)
   where msg =
@@ -48,9 +52,13 @@ helpMsg = unlines (msg ++ displayCommands dashOpener usageMsg)
           ,"Usage:"
           ]
 
+-- |
+-- A version message to display users
 versionMsg :: String
 versionMsg = withCyan "Pureli " ++ "interpreter version 0.5.1"
 
+-- |
+-- A usage message to display users, describing the possible operations of pureli
 usageMsg :: [(String, String)]
 usageMsg =
     [("pureli", "Runs the read-eval-print loop")
