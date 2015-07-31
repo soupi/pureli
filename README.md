@@ -207,5 +207,28 @@ Examples
 
 ```
 
+### A Pureli REPL
+```rkt
+(module main)
+
+(define main
+  (do!
+    (print! "Pureli REPL made in Pureli")
+    (repl)))
+
+(define repl ()
+  (do!
+    (let! input (read!))
+    (display! "=> ")
+    (let! result
+          (try (pure (eval (read-str input)))
+               (eval (read-str input))
+               (pure "Error in expression")))
+    (if
+      (nil? result)
+      (pure nil)
+      (print! result))
+    (repl)))
+```
 
 More examples at `examples/` and `tests/`.
