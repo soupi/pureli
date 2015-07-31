@@ -1,13 +1,15 @@
-name:                Pureli
+name:                pureli
 version:             0.5.1
 synopsis:            A purely functional, dynamically typed, parallel interpreted, lisp-like programming language
 license:             BSD3
 license-file:        LICENSE
 author:              Gil Mizrahi
-Homepage:            https://github.com/soupi/pureli
+Homepage:            https://soupi.github.io/pureli
 maintainer:          suppi@tutanota.com
 category:            Language
 build-type:          Simple
+
+tested-with: GHC==7.8
 
 -- Extra files to be distributed with the package, such as examples or a
 -- README.
@@ -20,9 +22,16 @@ data-files:
 
 cabal-version:       >=1.10
 
-executable pureli
-  main-is:             Main.hs
-  other-extensions:    LambdaCase
+
+source-repository head
+  type: git
+  location: https://github.com/soupi/pureli
+
+
+library
+  other-extensions:
+    LambdaCase
+
   build-depends:
      base >=4.7
     ,containers >=0.5
@@ -38,13 +47,47 @@ executable pureli
     ,bytestring
     ,file-embed
 
+  exposed-modules:
+    Pureli.AST
+    Pureli.Lexer
+    Pureli.ParseNumber
+    Pureli.Parser
+    Pureli.Printer
+    Pureli.Module
+    Pureli.Eval
+    Pureli.Repl
+    Pureli.Run
+    Pureli.Utils
+
+  exposed:
+    True
+
+  buildable:
+    True
+
   other-modules:
-    Paths_Pureli
+    Paths_pureli
 
   hs-source-dirs:      src
   default-language:    Haskell2010
 
 
   ghc-options: -threaded -Wall -fwarn-tabs -funbox-strict-fields -O2
+               -fno-warn-orphans -fno-warn-unused-do-bind
+
+
+executable pureli
+  main-is:             Main.hs
+  other-extensions:    LambdaCase
+  build-depends:
+     base >=4.7
+    ,pureli
+
+  hs-source-dirs:      exec-src
+  default-language:    Haskell2010
+
+
+  ghc-options: -threaded -Wall -fwarn-tabs -funbox-strict-fields -O2
                -rtsopts -eventlog -fno-warn-orphans -fno-warn-unused-do-bind
+
 

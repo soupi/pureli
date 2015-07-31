@@ -20,7 +20,7 @@ import Pureli.Utils
 import Pureli.Parser
 import Pureli.Printer()
 
-import Paths_Pureli (getDataFileName)
+import Paths_pureli (getDataFileName)
 import Data.FileEmbed (embedDir)
 import qualified Data.ByteString.Char8 as BS
 import Data.List (stripPrefix)
