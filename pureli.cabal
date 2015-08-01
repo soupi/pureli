@@ -9,7 +9,7 @@ maintainer:          suppi@tutanota.com
 category:            Language
 build-type:          Simple
 
-tested-with: GHC==7.8
+tested-with: GHC==7.10
 
 -- Extra files to be distributed with the package, such as examples or a
 -- README.
