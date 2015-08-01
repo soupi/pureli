@@ -15,7 +15,7 @@ Installation
 
 From source:
 
-Install GHC 7.8.* and cabal and run the following commands:
+Install GHC 7.10.* and cabal and run the following commands:
 
 ```sh
 git clone https://github.com/soupi/pureli

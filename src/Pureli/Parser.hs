@@ -1,5 +1,6 @@
 
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 -- |
 -- A parser for the language

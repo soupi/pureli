@@ -8,7 +8,7 @@ module Pureli.AST where
 import qualified Data.Map    as M
 import qualified Text.Parsec.Pos as P (SourcePos, newPos)
 import System.IO             as IO (FilePath)
-import Control.DeepSeq             (NFData)
+import Control.DeepSeq             (NFData, rnf)
 import GHC.Generics                (Generic)
 
 ------------------
@@ -112,9 +112,9 @@ moduleSplitter = '/'
 -- instances
 ----------------
 
-instance NFData Expr
-instance NFData Atom
-instance NFData (WithMD a)
+instance NFData Expr where rnf x = seq x ()
+instance NFData Atom where rnf x = seq x ()
+instance NFData (WithMD a) where rnf x = seq x ()
 
 -- |
 -- map a function on the underline type, keeps the metadata

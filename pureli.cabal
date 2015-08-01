@@ -38,7 +38,7 @@ library
     ,parsec >=3.1
     ,transformers >= 0.4
     ,parallel
-    ,deepseq
+    ,deepseq >= 1.4.0.0
     ,generic-deriving
     ,directory
     ,filepath

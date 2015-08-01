@@ -20,6 +20,7 @@ import qualified Data.Functor.Identity as MT
 import Data.Function (on)
 import qualified Data.Map as M
 import qualified Control.Parallel.Strategies as P
+import Control.DeepSeq (rnf)
 import qualified Data.Char as C (toUpper, toLower)
 
 import Debug.Trace
@@ -49,7 +50,7 @@ type PureEval a = MT.ReaderT (EvalState MT.Identity) (MT.ExceptT Error MT.Identi
 -- |evaluation in the io monad
 type IOEval a = Evaluation IO a
 
-instance P.NFData Error
+instance P.NFData Error where rnf x = seq x ()
 
 -- |environment and builtin function: we need to save these things to know how
 -- should we evaluate expressions
