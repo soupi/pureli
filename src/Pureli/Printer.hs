@@ -40,7 +40,7 @@ instance Show a => Show (WithMD a) where
 
 
 getIndent :: Int -> String
-getIndent indent = foldr (++) "" $ replicate indent "  "
+getIndent indent = concat $ replicate indent "  "
 
 -- |convert an atom to a string.
 showAtom :: Int -> Atom -> String
@@ -64,6 +64,7 @@ showExpr indent expr = getIndent indent ++ case expr of
   PROCEDURE x -> show x
   ENVEXPR _ x -> "~" ++ show x
   STOREENV x  -> "(;storenv " ++ show x ++ ")"
+  IOResult x  -> "<IO: " ++ show x ++ ">"
 
 
 

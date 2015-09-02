@@ -8,7 +8,6 @@
 module Pureli.Module (loadModule, requireToMod) where
 
 import Data.Maybe  (fromMaybe)
-import Control.Applicative ((<$>))
 import Control.Exception (IOException, catch)
 import qualified Control.Monad.Trans.Class as MT
 import qualified Control.Monad.Trans.Except as MT

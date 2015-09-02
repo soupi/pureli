@@ -6,8 +6,6 @@
 -- A parser for the language
 module Pureli.Parser (parseExpr, parseFile, parseReqDefExp, getMDSource) where
 
-import Control.Applicative (pure, (<$>))
-
 import Data.Maybe  (fromMaybe)
 import Text.ParserCombinators.Parsec ((<|>))
 import qualified Text.Parsec as P

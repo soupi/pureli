@@ -7,7 +7,6 @@
 module Pureli.Eval (initEvalState, addToEnv, addImport, replModule, evalExpr, evalModule) where
 
 import Control.Monad (liftM)
-import Control.Applicative ((<$>))
 import Data.Foldable (forM_)
 import Control.Exception (IOException, catch)
 import Data.List (find)
@@ -132,6 +131,7 @@ pureEval modul exprWithMD@(WithMD md expr) =
       LIST ls     -> (modul, evalOp exprWithMD ls)
       ENVEXPR m e -> (m, MT.withReaderT (changeModule m) (eval e))
       STOREENV e  -> (modul, return $ wrapInEnv modul e)
+      IOResult e  -> (modul, return $ WithMD md $ IOResult e)
 
 
 -- |evaluate an expression in pure context and extend environment
@@ -170,6 +170,7 @@ eval exprWithMD@(WithMD md expr) = do
     LIST ls     -> evalOp exprWithMD ls
     ENVEXPR m e -> MT.withReaderT (changeModule m) (eval e)
     STOREENV e  -> return $ wrapInEnv modul e
+    IOResult e  -> return $ WithMD md $ IOResult e
 
 -- |evaluate an expression in pure context and extend environment
 evalExtend :: Monad m => [(Name, WithMD Expr)] -> WithMD Expr -> Evaluation m Expr
@@ -469,12 +470,12 @@ ioBuiltins = M.fromList [("pure",  evalPure)
 
 -- |takes the value from an IO context
 fromIO :: WithMD Expr -> IOEval Expr
-fromIO (WithMD _ (QUOTE (WithMD _ (LIST [WithMD _ (ATOM (Symbol ";IO")), result])))) = lift $ return result
+fromIO (WithMD _ (QUOTE (WithMD _ (IOResult result)))) = lift $ return result
 fromIO rootExpr = throwErr (Just rootExpr) "not an IO action"
 
 -- |inserts a value into an IO context
 returnIO :: (MonadTrans t, Monad m) => WithMD Expr -> t m (WithMD Expr)
-returnIO expr@(WithMD md _) = lift $ return $ WithMD md $ QUOTE $ WithMD md $ LIST [WithMD md (ATOM (Symbol ";IO")), expr]
+returnIO expr@(WithMD md _) = lift $ return $ WithMD md $ QUOTE $ WithMD md $ IOResult expr
 
 --------
 -- IO
@@ -855,7 +856,8 @@ replaceStoresInQuote (WithMD md expr) =
     LIST ls     -> return . WithMD md . LIST  =<< mapM replaceStoresInQuote ls
     ENVEXPR m e -> return $ wrapInEnv m e
     STOREENV e  -> return . flip wrapInEnv e =<< liftM getModule ask
-    ATOM a      ->   getEnvironment >>= (\(modul, env, _) -> evalAtomOrSymbol modul env (WithMD md expr) a) >>= \case
+    IOResult e  -> return . WithMD md . IOResult =<< replaceStoresInQuote e
+    ATOM a      -> getEnvironment >>= (\(modul, env, _) -> evalAtomOrSymbol modul env (WithMD md expr) a) >>= \case
                     (_, e@(WithMD _ (ENVEXPR _ _))) -> return e
                     (m, e) -> return $ wrapInEnv m e
 

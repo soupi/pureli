@@ -41,8 +41,8 @@ runExpr modul content =
           Right expr -> return $ addToEnv (fst res, expr) modul
 
 printExpr :: WithMD Expr -> IO ()
-printExpr (WithMD _ (QUOTE (WithMD _ (LIST [WithMD _ (ATOM (Symbol ";IO")), WithMD _ (ATOM Nil)])))) = return ()
-printExpr (WithMD _ (QUOTE (WithMD _ (LIST [WithMD _ (ATOM (Symbol ";IO")), result])))) = print result
+printExpr (WithMD _ (QUOTE (WithMD _ (IOResult (WithMD _ (ATOM Nil)))))) = return ()
+printExpr (WithMD _ (QUOTE (WithMD _ (IOResult (result))))) = print result
 printExpr val = print val
 
 

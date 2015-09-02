@@ -90,6 +90,7 @@ data Expr = LIST [WithMD Expr]  -- ^a list of expressions
           | PROCEDURE Closure   -- ^a procedure - a closure
           | ENVEXPR Module (WithMD Expr) -- ^an expression with an environment
           | STOREENV (WithMD Expr) -- ^converts to ENVEXPR with current module
+          | IOResult (WithMD Expr) -- ^a return value of an IO action
           deriving (Eq, Generic)
 
 -- |
