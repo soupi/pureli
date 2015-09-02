@@ -129,7 +129,7 @@ cabal install</pre></div>
                     <li>
                       <strong>Strings</strong>: Text strings such as (<code>"Hello world!"</code>, <code>"Pureλi is Great!"</code>)</li>
                     <li>
-                      <strong>Symbols</strong>: Symbols are used as names for values and functions. (<code>x</code>, <code>lines-&gt;str</code>, <code>print!</code>) are symbols that evaluates to variables and functions.</li>
+                      <strong>Symbols</strong>: Symbols are used as names for values and functions. (<code>x</code>, <code>lines-&gt;str</code>, <code>println!</code>) are symbols that evaluates to variables and functions.</li>
                     <li>
                       <strong>Keywords</strong>: Keywords are like Symbols, only that they always evaluated to themselves. They are useful for passing flags to functions or as keys for a dictionary. (<code>:hello</code>, <code>:x</code>, <code>:always-start-with-colons</code>)</li>
                     <li>
@@ -223,7 +223,7 @@ cabal install</pre></div>
     true-branch))
 
 (<span class="pl-en">define</span> main
-  (print!
+  (println!
     (<span class="pl-en">unless</span>
       <span class="pl-c1">#t</span>
       (error <span class="pl-c1">"<span class="pl-c1">not thrown</span>"</span>)
@@ -290,9 +290,9 @@ cabal install</pre></div>
 
 (<span class="pl-en">define</span> main
   (do!
-    (print! <span class="pl-c1">"<span class="pl-c1">calculating the sum of 1, 2 and 3:</span>"</span>) <span class="pl-c">;; print! is impure</span>
+    (println! <span class="pl-c1">"<span class="pl-c1">calculating the sum of 1, 2 and 3:</span>"</span>) <span class="pl-c">;; println! is impure</span>
     (let! result (pure (+ <span class="pl-c1">1</span> <span class="pl-c1">2</span> <span class="pl-c1">3</span>))) <span class="pl-c">;; pure lifts (+ 1 2 3) into impure context and let! binds it to result</span>
-    (print! result))) <span class="pl-c">;; print! prints the result</span>
+    (println! result))) <span class="pl-c">;; println! prints the result</span>
                                           </pre></div>
 
                                           <p>This separation is useful for a number of things:</p>
@@ -347,9 +347,9 @@ cabal install</pre></div>
                                             <li>
                                               <code>read-file!</code> reads a file</li>
                                             <li>
-                                              <code>print!</code> writes to the standard output with newline</li>
+                                              <code>print!</code> writes to the standard output without newline</li>
                                             <li>
-                                              <code>display!</code> writes to the standard output without newline</li>
+                                              <code>println!</code> writes to the standard output with newline</li>
                                             <li>
                                               <code>print-file!</code> writes a string to a file</li>
                                             <li>

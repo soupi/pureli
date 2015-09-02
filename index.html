@@ -75,7 +75,7 @@
         <div class="highlight highlight-rkt"><pre>(<span class="pl-en">module</span> main)
 
 (<span class="pl-en">define</span> main
-  (print! <span class="pl-c1">"<span class="pl-c1">Hello World!</span>"</span>))
+  (println! <span class="pl-c1">"<span class="pl-c1">Hello World!</span>"</span>))
         </pre></div>
 
         <h3>
@@ -88,11 +88,11 @@
 
 (<span class="pl-en">define</span> main
   (do!
-    [print! <span class="pl-c1">"<span class="pl-c1">echo program</span>"</span>]
+    [println! <span class="pl-c1">"<span class="pl-c1">echo program</span>"</span>]
     [<span class="pl-en">letrec</span> ([go!
       (<span class="pl-en">lambda</span> ()
         (do!
-          [io/bind! (read!) print!]
+          [io/bind! (read!) println!]
           [go!]))])
       (go!)]))</pre></div>
 
@@ -107,9 +107,9 @@
 
 (<span class="pl-en">define</span> main
   (do!
-    (print! <span class="pl-c1">"<span class="pl-c1">calculating 2^10000 + 2^10001 + ... + 2^10030</span>"</span>)
+    (println! <span class="pl-c1">"<span class="pl-c1">calculating 2^10000 + 2^10001 + ... + 2^10030</span>"</span>)
     (let! result (pure calculation))
-    (print! result)))
+    (println! result)))
 
 
 (<span class="pl-en">define</span> calculation
@@ -135,13 +135,13 @@
 
 (<span class="pl-en">define</span> main
   (do!
-    (print! <span class="pl-c1">"<span class="pl-c1">Pureli REPL made in Pureli</span>"</span>)
+    (println! <span class="pl-c1">"<span class="pl-c1">Pureli REPL made in Pureli</span>"</span>)
     (repl)))
 
 (<span class="pl-en">define</span> repl ()
   (do!
     (let! input (read!))
-    (display! <span class="pl-c1">"<span class="pl-c1">=&gt; </span>"</span>)
+    (print! <span class="pl-c1">"<span class="pl-c1">=&gt; </span>"</span>)
     (let! result
           (try (pure (eval (read-str input)))
                (eval (read-str input))
@@ -149,7 +149,7 @@
     (<span class="pl-en">if</span>
       (nil? result)
       (pure nil)
-      (print! result))
+      (println! result))
     (repl)))</pre></div>
 
 
