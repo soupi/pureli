@@ -61,7 +61,7 @@ helpMsg = unlines (msg ++ displayCommands dashOpener usageMsg)
 -- |
 -- A version message to display users
 versionMsg :: String
-versionMsg = withCyan "Pureli " ++ "interpreter version 0.5.1"
+versionMsg = withCyan "Pureli " ++ "interpreter version 0.6.0"
 
 -- |
 -- A usage message to display users, describing the possible operations of pureli

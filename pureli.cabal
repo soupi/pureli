@@ -1,5 +1,5 @@
 name:                pureli
-version:             0.5.1
+version:             0.6.0
 synopsis:            A purely functional, dynamically typed, parallel interpreted, lisp-like programming language
 license:             BSD3
 license-file:        LICENSE
