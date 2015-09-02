@@ -8,7 +8,7 @@
 (define main
   (do!
     [let! y x]
-    [print! y]
+    [println! y]
     [id x]))
 
 (define id

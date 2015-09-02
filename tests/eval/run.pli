@@ -4,7 +4,7 @@
 (require "run-extra.pli" run-extra extra (hello-str))
 
 (define main
-  (print! (id/id extra/hello-str)))
+  (println! (id/id extra/hello-str)))
 
 (module id)
 

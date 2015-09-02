@@ -9,7 +9,7 @@
 
 
 (define main
-  (print!
+  (println!
     (unless
       #t
       (error "not thrown")

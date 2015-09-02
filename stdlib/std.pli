@@ -391,7 +391,7 @@
 (define assert! ~params
   (do!
     (io/sequence!
-      (list/map display! (++ (assert-helper 'params) (list "\n"))))
+      (list/map print! (++ (assert-helper 'params) (list "\n"))))
     (pure nil)))
 
 
@@ -414,52 +414,52 @@
     [test-cons!]
     [test-map!]
     [test-bind!]
-    [print! "----------"]
+    [println! "----------"]
      moti-tests))
 
 (define test-elem! ()
   (do!
-    [print! "list/elem test. expected results: #t"]
-    [print! (list/elem 3 (list 1 2 3))]
-    [print! (try (list/elem 3 3) #t)]
-    [print! (bool/not (list/elem 4 (list 1 2 3)))]))
+    [println! "list/elem test. expected results: #t"]
+    [println! (list/elem 3 (list 1 2 3))]
+    [println! (try (list/elem 3 3) #t)]
+    [println! (bool/not (list/elem 4 (list 1 2 3)))]))
 
 (define test-cons! ()
   (do!
-    [print! "list/cons test. expected results: (1 2)"]
-    [print! (list/cons 1 2)]
-    [print! (list/cons 1 (list 2))]
-    [print! (list/cons 1 (cdr (list/cons 1 2)))]))
+    [println! "list/cons test. expected results: (1 2)"]
+    [println! (list/cons 1 2)]
+    [println! (list/cons 1 (list 2))]
+    [println! (list/cons 1 (cdr (list/cons 1 2)))]))
 
 (define test-map! ()
   (do!
-    [print! "test list/map"]
-    [print! (list/map std/id (list))]
-    [print! (list/map std/id (list 1 2 3))]
-    [print! (list/map show (list))]
-    [print! (list/map show (list 1 2 3))]
-    [print! (list/map (lambda (x) (+ 0.0 x)) (list 1 2 3))]
-    [print! (list/map (lambda (x) (+ 1 x)) (list 1 2 3))]
-    [print! (list/map + (list 1 2 3) (list 3 2 1))]
-    [print! (list/map list/cons (list 1 2 3) (list 3 2 1))]))
+    [println! "test list/map"]
+    [println! (list/map std/id (list))]
+    [println! (list/map std/id (list 1 2 3))]
+    [println! (list/map show (list))]
+    [println! (list/map show (list 1 2 3))]
+    [println! (list/map (lambda (x) (+ 0.0 x)) (list 1 2 3))]
+    [println! (list/map (lambda (x) (+ 1 x)) (list 1 2 3))]
+    [println! (list/map + (list 1 2 3) (list 3 2 1))]
+    [println! (list/map list/cons (list 1 2 3) (list 3 2 1))]))
 
 (define test-fmap! ()
   (do!
-    [print! "test list/fmap"]
-    [print! (list/fmap std/id (list))]
-    [print! (list/fmap std/id (list 1 2 3))]
-    [print! (list/fmap show (list))]
-    [print! (list/fmap show (list 1 2 3))]
-    [print! (list/fmap std/id (list 1 2 3))]
-    [print! (list/fmap (lambda (x) (+ 0.0 x)) (list 1 2 3))]
-    [print! (list/fmap (lambda (x) (+ 1 x)) (list 1 2 3))]))
+    [println! "test list/fmap"]
+    [println! (list/fmap std/id (list))]
+    [println! (list/fmap std/id (list 1 2 3))]
+    [println! (list/fmap show (list))]
+    [println! (list/fmap show (list 1 2 3))]
+    [println! (list/fmap std/id (list 1 2 3))]
+    [println! (list/fmap (lambda (x) (+ 0.0 x)) (list 1 2 3))]
+    [println! (list/fmap (lambda (x) (+ 1 x)) (list 1 2 3))]))
 
 
 
 (define test-bind! ()
   (do!
-    [print! "test bind. expected result: #t"]
-    [io/bind! (pure #t) print!]))
+    [println! "test bind. expected result: #t"]
+    [io/bind! (pure #t) println!]))
 
 
 ;;;
@@ -467,27 +467,27 @@
 
 (define moti-tests
   (do!
-    [print! (dict/list->dict (list (list "a" 5) (list "b" 6)))]
-    [print! (dict/list->dict (list (list "a" 5) (list "b" 6) (list "d" 6) (list "e" 6) (list "f" 6) (list "g" 6)))]
-    [print! (dict/list->dict (list (list "a" 5) (list 6) (list "d" 6) (list "e" 6) (list "f" 6) (list "g" 6)))]
-    [print! (dict/list->dict (list (list 5) (list "b" 6) (list "d" 6) (list "e" 6) (list "f" 6) (list "g" 6)))]
+    [println! (dict/list->dict (list (list "a" 5) (list "b" 6)))]
+    [println! (dict/list->dict (list (list "a" 5) (list "b" 6) (list "d" 6) (list "e" 6) (list "f" 6) (list "g" 6)))]
+    [println! (dict/list->dict (list (list "a" 5) (list 6) (list "d" 6) (list "e" 6) (list "f" 6) (list "g" 6)))]
+    [println! (dict/list->dict (list (list 5) (list "b" 6) (list "d" 6) (list "e" 6) (list "f" 6) (list "g" 6)))]
     [let! x (pure (list (list "a" 5) (list "b" 6)))]
-    [print! x]
-    [print! (dict/lookup "c" x)]
+    [println! x]
+    [println! (dict/lookup "c" x)]
     [let! y (pure (dict/insert (list "c" 7) x))]
     [let! z (pure (dict/insert (list "c" 8) x))]
-    [print! y]
-    [print! z]
-    [print! (dict/lookup "c" y)]
-    [print! (dict/remove "c" y)]
-    [print! (list/reverse (list 1 2 3 4 5))]
-    [print! (list/index (list 1 2 3 4) 1)]
-    [print! (list/filter integer? (list 1 2 3 1.3))]
-    [print! (list/fold + (list 1 2 3 4) 0)]
-    [print! (numbers/max 1 2 3 -1)]
-    [print! (numbers/gcd 1024 516)]
-    [print! (numbers/lcm 12 18)]
+    [println! y]
+    [println! z]
+    [println! (dict/lookup "c" y)]
+    [println! (dict/remove "c" y)]
+    [println! (list/reverse (list 1 2 3 4 5))]
+    [println! (list/index (list 1 2 3 4) 1)]
+    [println! (list/filter integer? (list 1 2 3 1.3))]
+    [println! (list/fold + (list 1 2 3 4) 0)]
+    [println! (numbers/max 1 2 3 -1)]
+    [println! (numbers/gcd 1024 516)]
+    [println! (numbers/lcm 12 18)]
     [let! result (pure (numbers/min 1 2 5 -1))]
-    [print! "Merge List Result:"]
-    [print! result]))
+    [println! "Merge List Result:"]
+    [println! result]))
 

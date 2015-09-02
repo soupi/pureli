@@ -1,4 +1,4 @@
 (module main)
 
 (define main
-  (print! argv))
+  (println! argv))

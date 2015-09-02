@@ -6,6 +6,6 @@
 
 (define main
   (do!
-    [print! (std/id "module loaded")]
-    [print! (bool/not (list/elem 5 (list 1 2 3)))]
+    [println! (std/id "module loaded")]
+    [println! (bool/not (list/elem 5 (list 1 2 3)))]
     ))

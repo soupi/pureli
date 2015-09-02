@@ -63,8 +63,8 @@ Built-in IO Actions
 - `let!` binds an IO result to a variable
 - `read!` reads a line from the standard input
 - `read-file!` reads a file
-- `print!` writes to the standard output with newline
-- `display!` writes to the standard output without newline
+- `println!` writes to the standard output without newline
+- `println!` writes to the standard output with newline
 - `print-file!` writes a string to a file
 - `pure` raises a pure computation into IO context
 
@@ -84,7 +84,7 @@ A program must have the top level value `main` - an IO action which is the entry
 
 For example:
 
-- `(define main (print! "Hello, World!"))`
+- `(define main (println! "Hello, World!"))`
 
 
 ### Unevaluated parameters
@@ -104,7 +104,7 @@ It is also possible to define functions with receives unevaluated parameters
 
 
 (define main
-  (print!
+  (println!
     (unless
       #t
       (error "not thrown")
@@ -150,8 +150,8 @@ Examples
 (define main
   (do!
     [let! result (pure (factorial 5))]
-    [print! "factorial 5 is: "]
-    [print! result]))
+    [println! "factorial 5 is: "]
+    [println! result]))
 
 (define factorial [n]
   (letrec ((go (lambda (n prod)
@@ -172,11 +172,11 @@ Examples
 
 (define main
   (do!
-    [print! "echo program"]
+    [println! "echo program"]
     [letrec ([go!
       (lambda ()
         (do!
-          [io/bind! (read!) print!]
+          [io/bind! (read!) println!]
           [go!]))])
       (go!)]))
 ```
@@ -190,7 +190,7 @@ Examples
 
 (define main
   (do!
-    [print! (list/elem 2 (list 1 2 3))])) ; ==> #t
+    [println! (list/elem 2 (list 1 2 3))])) ; ==> #t
 ```
 
 
@@ -203,7 +203,7 @@ Examples
 
 (define main
   (do!
-    [print! (my-std/elem 4 (list 1 2 3))])) ; ==> #f
+    [println! (my-std/elem 4 (list 1 2 3))])) ; ==> #f
 
 ```
 
@@ -213,13 +213,13 @@ Examples
 
 (define main
   (do!
-    (print! "Pureli REPL made in Pureli")
+    (println! "Pureli REPL made in Pureli")
     (repl)))
 
 (define repl ()
   (do!
     (let! input (read!))
-    (display! "=> ")
+    (print! "=> ")
     (let! result
           (try (pure (eval (read-str input)))
                (eval (read-str input))
@@ -227,7 +227,7 @@ Examples
     (if
       (nil? result)
       (pure nil)
-      (print! result))
+      (println! result))
     (repl)))
 ```
 

@@ -5,7 +5,7 @@
 
 (module main)
 
-(define main (do! (print! (id (const x 3)))))
+(define main (do! (println! (id (const x 3)))))
 
 (define x 5)
 

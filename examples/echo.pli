@@ -6,12 +6,12 @@
 
 (define main
    (do!
-     [print! "echo program"]
-     [print! "to terminate, press ^C"]
+     [println! "echo program"]
+     [println! "to terminate, press ^C"]
      [letrec
        ([go!
           (lambda ()
             (do!
-              [io/bind! (read!) print!]
+              [io/bind! (read!) println!]
               [go!]))])
        (go!)]))

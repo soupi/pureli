@@ -5,5 +5,5 @@
 (define f (y y) (+ x y))
 
 (define main
-  (print! (f 1 2)))
+  (println! (f 1 2)))
 

@@ -5,6 +5,8 @@
 -- execution module
 module Pureli.Run (run) where
 
+import System.IO (hSetBuffering, stdout, BufferMode(NoBuffering))
+
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Except
 import System.Directory (setCurrentDirectory, getCurrentDirectory)
@@ -21,9 +23,13 @@ run :: [String] -> IO ()
 run = \case
     []          -> runRepl -- run repl
     ["--help"]  -> putStrLn helpMsg -- print help message
-    ["--version"] -> putStrLn $ versionMsg
-    ("--test":file:argv) -> runModule "test" file argv
-    (file:argv) -> runModule "main" file argv
+    ["--version"] -> putStrLn versionMsg
+    ("--test":file:argv) -> do
+      hSetBuffering stdout NoBuffering
+      runModule "test" file argv
+    (file:argv) -> do
+      hSetBuffering stdout NoBuffering
+      runModule "main" file argv
 
 -- |
 -- Interprets a file and run a selected module in it

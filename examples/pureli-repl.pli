@@ -2,13 +2,13 @@
 
 (define main
   (do!
-    (print! "Pureli REPL made in Pureli")
+    (println! "Pureli REPL made in Pureli")
     (repl)))
 
 (define repl ()
   (do!
     (let! input (read!))
-    (display! "=> ")
+    (print! "=> ")
     (let! result
           (try (pure (eval (read-str input)))
                (eval (read-str input))
@@ -16,5 +16,5 @@
     (if
       (nil? result)
       (pure nil)
-      (print! result))
+      (println! result))
     (repl)))

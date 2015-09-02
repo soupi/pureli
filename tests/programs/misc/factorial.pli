@@ -13,8 +13,8 @@
 (define main
   (do!
     [let! result (pure (factorial n))]
-    [print! (++ "The factorial of " (show n) " is: ")]
-    [print! result]))
+    [println! (++ "The factorial of " (show n) " is: ")]
+    [println! result]))
 
 (define n 23700)
 

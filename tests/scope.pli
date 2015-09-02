@@ -7,4 +7,4 @@
 
 (define main
   (let ((tmp #f))
-    (print! (f))))
+    (println! (f))))

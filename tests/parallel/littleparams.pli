@@ -12,7 +12,7 @@
 
 (define main
   (do!
-    (print! "This should create 30 sparks,")
-    (print! "10 for procedure call, 10 for +, and another 10 for + (without procedure call)")
+    (println! "This should create 30 sparks,")
+    (println! "10 for procedure call, 10 for +, and another 10 for + (without procedure call)")
     (let! result (pure (add loop (trace 100001 100001))))
-    (print! result)))
+    (println! result)))

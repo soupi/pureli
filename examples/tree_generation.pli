@@ -11,11 +11,11 @@
 ;; entry point
 (define main
   (do!
-    (print! welcome-msg)
+    (println! welcome-msg)
     (let! input (io/bind! (read!) (lambda (input) (pure (logic/evaluate-input input)))))
-    (print! "")
+    (println! "")
     (let ([size (car input)] [trunk (car (cdr input))] [leaf (car (cdr (cdr input)))])
-         (print! (logic/calculate-tree size trunk leaf)))))
+         (println! (logic/calculate-tree size trunk leaf)))))
 
 (define welcome-msg
   (lines->str

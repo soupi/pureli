@@ -3,6 +3,6 @@
 
 (define main
    (do!
-     (print! "tell me your name...")
+     (println! "tell me your name...")
      (let! name (read!))
-     (print! (++ "Hello, " name))))
+     (println! (++ "Hello, " name))))

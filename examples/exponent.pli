@@ -6,9 +6,9 @@
 
 (define main
   (do!
-    (print! "calculating 2^10001 + 2^10002 + ... + 2^10030")
+    (println! "calculating 2^10001 + 2^10002 + ... + 2^10030")
     (let! result (pure calculation))
-    (print! result)))
+    (println! result)))
 
 
 ;; calculating 2^10001 + 2^10002 + ... + 2^10030

@@ -8,7 +8,7 @@
 
 (define main
    (do!
-     [print! "failure might including an infinite loop"]
-     [print! (show "hello world")]
-     [print! (show +)]
-     [print! (show (lambda () 5))]))
+     [println! "failure might including an infinite loop"]
+     [println! (show "hello world")]
+     [println! (show +)]
+     [println! (show (lambda () 5))]))

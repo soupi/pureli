@@ -9,4 +9,4 @@
 (define main
   (do!
     [let! x (pure test)]
-    [print! x]))
+    [println! x]))

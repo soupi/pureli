@@ -7,5 +7,5 @@
 (define x 2)
 
 (define main
-  (print! (f 1)))
+  (println! (f 1)))
 

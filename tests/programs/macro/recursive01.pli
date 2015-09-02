@@ -12,7 +12,7 @@
 
 (define main
   (do!
-    [print! x]))
+    [println! x]))
 
 (define x
   (cond (#f (error "this is my error"))

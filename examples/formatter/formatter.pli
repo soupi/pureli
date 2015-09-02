@@ -6,7 +6,7 @@
 (define main
   (if (= (length argv) 2)
     (run (car argv) (car (cdr argv)))
-    (print! "usage: pureli formatter.pli <input-file> <output-file>")))
+    (println! "usage: pureli formatter.pli <input-file> <output-file>")))
 
 (define run (input-file output-file)
   (do!

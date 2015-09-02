@@ -11,9 +11,9 @@
 
 (define main
   (do!
-    (print! "This should create 40 sparks,")
-    (print! "1 for each list, 10 for procedure call, 10 for ++, and another 10 for ++ (without procedure call)")
+    (println! "This should create 40 sparks,")
+    (println! "1 for each list, 10 for procedure call, 10 for ++, and another 10 for ++ (without procedure call)")
     (let! result (pure (append (list 100000) (list 100001) (list 100002) (list 100003) (list 100004) (list 100005) (list 100006) (list 100007) (list 100008) (list 100009))))
-    (print! result)
+    (println! result)
     (let! result (io-append (list 100000) (list 100001) (list 100002) (list 100003) (list 100004) (list 100005) (list 100006) (list 100007) (list 100008) (list 100009)))
-    (print! result)))
+    (println! result)))

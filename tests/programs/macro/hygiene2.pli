@@ -2,8 +2,8 @@
 
 (define main
   (do!
-    (print! "expected result: 15")
-    (print! (let ((tmp 5)) (test (+ tmp 9))))))
+    (println! "expected result: 15")
+    (println! (let ((tmp 5)) (test (+ tmp 9))))))
 
 (define test (~x)
    (let ((tmp 1))

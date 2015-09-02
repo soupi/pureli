@@ -1,0 +1,8 @@
+(module main)
+
+(define main
+  (do!
+    (print! "he")
+    (print! "llo")
+    (read!)
+    (print! "bye")))

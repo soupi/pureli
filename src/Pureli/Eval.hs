@@ -462,8 +462,8 @@ pureContextBuiltins =
 ioBuiltins :: Builtins IO
 ioBuiltins = M.fromList [("pure",  evalPure)
                         ,("do!",    evalDo)
-                        ,("print!", evalPrint putStrLn)
-                        ,("display!", evalPrint putStr)
+                        ,("println!", evalPrint putStrLn)
+                        ,("print!", evalPrint putStr)
                         ,("read!",  evalRead)
                         ,("print-file!", evalPrintFile)
                         ,("read-file!",  evalReadFile)]
@@ -515,7 +515,7 @@ evalSequence rootExpr@(WithMD exprMD _) = \case
   []     -> returnIO $ WithMD exprMD (ATOM Nil)
 
 
--- |evaluate a 'print!' IO action
+-- |evaluate a 'println! or print!' IO action
 evalPrint :: (String -> IO ()) -> WithMD Expr -> [WithMD Expr] -> IOEval Expr
 evalPrint display _ [expr@(WithMD md _)] = do
   modul <- liftM getModule ask

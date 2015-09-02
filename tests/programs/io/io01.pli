@@ -4,7 +4,7 @@
 (define x! (do! (pure 5)))
 
 (define printer! (f x)
-   (do! (print! (f x))))
+   (do! (println! (f x))))
 
 (define main
  (do!
