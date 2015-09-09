@@ -63,7 +63,7 @@ Built-in IO Actions
 - `let!` binds an IO result to a variable
 - `read!` reads a line from the standard input
 - `read-file!` reads a file
-- `println!` writes to the standard output without newline
+- `print!` writes to the standard output without newline
 - `println!` writes to the standard output with newline
 - `print-file!` writes a string to a file
 - `pure` raises a pure computation into IO context
