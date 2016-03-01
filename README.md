@@ -13,15 +13,21 @@ A purely functional, dynamically typed, parallel evaluated Lisp-like programming
 Installation
 ------------
 
-From source:
+## Binaries
 
-## Using stack
+- [OS X](https://github.com/soupi/pureli/raw/gh-pages/downloads/OS_X/pureli)
+- [Linux](https://github.com/soupi/pureli/raw/gh-pages/downloads/Linux/pureli)
+- [Windows](https://github.com/soupi/pureli/raw/gh-pages/downloads/Windows/pureli.exe)
+
+## From source:
+
+### Using stack
 
 ```sh
 stack install
 ```
 
-## Using cabal:
+### Using cabal:
 
 Install GHC 7.10.* and cabal and then run the following commands:
 
