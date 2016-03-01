@@ -20,7 +20,7 @@ import GHC.Generics                (Generic)
 data ReqDefExp = Req Require | Def (Name, WithMD Expr) | Exp (WithMD Expr)
 
 
--- a definition of a module read from parser
+-- |a definition of a module read from parser
 data ModuleDef = ModuleDef { modFile       :: IO.FilePath
                            , modName       :: Name
                            , modExposes    :: Maybe [Name]
@@ -122,9 +122,3 @@ instance NFData (WithMD a) where rnf x = seq x ()
 instance Functor WithMD where
   fmap f (WithMD md x) = WithMD md $ f x
 
-{-
--- |
--- I'm sure I had a reason to do that........
-instance Eq a => Ord (WithMD a) where
-  compare _ _ = EQ
--}

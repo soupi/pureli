@@ -5,14 +5,12 @@ license:             BSD3
 license-file:        LICENSE
 author:              Gil Mizrahi
 Homepage:            https://soupi.github.io/pureli
-maintainer:          suppi@tutanota.com
+maintainer:          soupiral@gmail.com
 category:            Language
 build-type:          Simple
 
 tested-with: GHC==7.10
 
--- Extra files to be distributed with the package, such as examples or a
--- README.
 extra-source-files:
   README.md
 

@@ -1,12 +1,14 @@
 
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 -- |
 -- A parser for the language
 module Pureli.Parser (parseExpr, parseFile, parseReqDefExp, getMDSource) where
 
-import Data.Maybe  (fromMaybe)
+import Data.Maybe (fromMaybe)
+import Data.Traversable (forM)
 import Text.ParserCombinators.Parsec ((<|>))
 import qualified Text.Parsec as P
 import qualified Text.Parsec.String as P (Parser)
@@ -15,7 +17,6 @@ import Pureli.Utils (duplicates)
 import Pureli.AST
 import Pureli.Printer()
 import qualified Pureli.Lexer as L
-import Pureli.ParseNumber
 
 parensOrBrackets :: P.Parser a -> P.Parser a
 parensOrBrackets parser = L.parens parser <|> L.brackets parser
@@ -32,6 +33,23 @@ atom =  parseNumber
     <|> keyword
     <|> string
     <|> nil
+
+parseNumber :: P.Parser Atom
+parseNumber = P.try parseNum
+  where
+    parseNum :: P.Parser Atom
+    parseNum = do
+        s <- P.optionMaybe $ P.char '-'
+        whole <- P.many1 P.digit
+        c <- P.optionMaybe ( P.char '.')
+        case c of
+            Nothing -> (return . Integer . read) (sign s ++ whole)
+            Just _  -> do
+                part <- P.many1 P.digit
+                (return . Real . read) (sign s ++ whole ++ "." ++ part)
+
+    sign :: Maybe a -> String
+    sign s = case s of { Nothing -> ""; Just _ -> "-" }
 
 symbol :: P.Parser Atom
 symbol = Symbol <$> L.identifier
@@ -219,7 +237,7 @@ parseFile :: String -> String -> Either String [WithMD ModuleDef]
 parseFile name input = case P.parse (P.many comments >> modules) name input of
   Left err  -> Left (show err)
   Right modefs ->
-    flip mapM modefs (\modef ->
+    forM modefs (\modef ->
       let dups = duplicates $ map fst (modDefs $ stripMD modef)
       in
         if   null dups
