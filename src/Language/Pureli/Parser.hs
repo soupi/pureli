@@ -5,18 +5,19 @@
 
 -- |
 -- A parser for the language
-module Pureli.Parser (parseExpr, parseFile, parseReqDefExp, getMDSource) where
+module Language.Pureli.Parser (parseExpr, parseFile, parseReqDefExp, getMDSource) where
 
 import Data.Maybe (fromMaybe)
+import Control.Monad (void)
 import Data.Traversable (forM)
 import Text.ParserCombinators.Parsec ((<|>))
 import qualified Text.Parsec as P
 import qualified Text.Parsec.String as P (Parser)
 
-import Pureli.Utils (duplicates)
-import Pureli.AST
-import Pureli.Printer()
-import qualified Pureli.Lexer as L
+import Language.Pureli.Utils (duplicates)
+import Language.Pureli.AST
+import Language.Pureli.Printer()
+import qualified Language.Pureli.Lexer as L
 
 parensOrBrackets :: P.Parser a -> P.Parser a
 parensOrBrackets parser = L.parens parser <|> L.brackets parser
@@ -147,7 +148,7 @@ define =  do
 ignoreCharSpaces :: Char -> P.Parser ()
 ignoreCharSpaces c = do
   P.spaces
-  L.symbol [c]
+  void $ L.symbol [c]
   P.spaces
 
 rparen :: P.Parser ()

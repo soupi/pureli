@@ -1,7 +1,7 @@
 
 -- |
 -- This module defines how to lex the language
-module Pureli.Lexer where
+module Language.Pureli.Lexer where
 
 import Text.Parsec.String (Parser)
 import Text.Parsec.Language (emptyDef)
@@ -12,16 +12,18 @@ import qualified Text.Parsec.Token as Tok
 
 lexer :: Tok.TokenParser ()
 lexer = Tok.makeTokenParser style
-    where
-        style = emptyDef { Tok.commentLine     = ";"
-                         , Tok.reservedNames   = ["nil", "define", "require", "module", "(define", "(require", "(module", "#t", "#f"]
-                         , Tok.caseSensitive   = True
-                         , Tok.commentStart    = "{~"
-                         , Tok.commentEnd      = "~}"
-                         , Tok.nestedComments  = True
-                         , Tok.identStart      = P.oneOf "&!$#%*+./<=>?@\\^|-~" <|> P.letter
-                         , Tok.identLetter     = P.oneOf "!:$#%*+./<=>?@\\^|-~" <|> P.alphaNum
-                         }
+  where
+    style =
+      emptyDef
+        { Tok.commentLine     = ";"
+        , Tok.reservedNames   = ["nil", "define", "require", "module", "(define", "(require", "(module", "#t", "#f"]
+        , Tok.caseSensitive   = True
+        , Tok.commentStart    = "{~"
+        , Tok.commentEnd      = "~}"
+        , Tok.nestedComments  = True
+        , Tok.identStart      = P.oneOf "&!$#%*+./<=>?@\\^|-~" <|> P.letter
+        , Tok.identLetter     = P.oneOf "!:$#%*+./<=>?@\\^|-~" <|> P.alphaNum
+        }
 
 symbol :: String -> Parser String
 symbol = Tok.symbol lexer

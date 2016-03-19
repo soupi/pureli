@@ -1,7 +1,7 @@
 
 -- |
 -- a utility module
-module Pureli.Utils where
+module Language.Pureli.Utils where
 
 import Data.List (group, sort)
 import qualified Control.Monad.Trans.Except as MT
@@ -10,9 +10,11 @@ import System.Info (os)
 import qualified System.FilePath.Posix   as P (takeDirectory, takeFileName)
 import qualified System.FilePath.Windows as W (takeDirectory, takeFileName)
 import qualified System.Console.ANSI as ANSI
+import Control.Parallel.Strategies (NFData)
+import Control.DeepSeq (rnf)
 
-import Pureli.AST
-import Pureli.Printer()
+import Language.Pureli.AST
+import Language.Pureli.Printer(printer)
 
 -- |
 -- get relative system functions (windows or posix)
@@ -26,11 +28,13 @@ systemFuncs =
 -- Error might contain the problematic expression with it's metadata and an error message.
 data Error = Error (Maybe (WithMD Expr)) String
 
+instance NFData Error where rnf x = seq x ()
+
 -- |
 -- How to print errors.
 instance Show Error where
   show (Error Nothing str) = withRed "*** Error: " ++ str
-  show (Error (Just (WithMD md expr)) str) = withRed "*** Error: " ++ show md ++ ": " ++ str ++ withRed "\n***" ++ " In expression: " ++ withBlue (show expr)
+  show (Error (Just (WithMD md expr)) str) = withRed "*** Error: " ++ show md ++ ": " ++ str ++ withRed "\n***" ++ " In expression: " ++ withBlue (printer expr)
 
 -- |
 -- utility to throw an expression.
@@ -179,7 +183,7 @@ wrapInEval e@(WithMD md _) = WithMD md $ LIST [WithMD md $ ATOM $ Symbol "eval",
 -- Colors
 
 withColor :: ANSI.Color -> String -> String
-withColor color string = do
+withColor color string =
   concat
    [ANSI.setSGRCode [ANSI.SetColor ANSI.Foreground ANSI.Vivid color]
    ,string

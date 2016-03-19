@@ -1,38 +1,46 @@
 {-# LANGUAGE LambdaCase #-}
 
 -- |a way to print expressions
-module Pureli.Printer where
+module Language.Pureli.Printer where
 
-import qualified Data.Map as M (toList)
+import qualified Data.Map as M
 
-import Pureli.AST
+import Language.Pureli.AST
+
+
+class Printer a where
+  printer :: a -> String
 
 ---------------
 -- Instances
 ---------------
 
-instance Show Module where
-  show = showModule
+instance Printer Module where
+  printer = showModule
 
-instance Show ModuleDef where
-  show = showModuleDef
+instance Printer ModuleDef where
+  printer = showModuleDef
 
-instance Show Atom where
-  show = showAtom 0
+instance Printer Atom where
+  printer = showAtom 0
 
-instance Show Expr where
-  show = showExpr 0
+instance Printer Expr where
+  printer = showExpr 0
 
-instance Show Closure where
-  show = showClosure 0
+instance Printer Closure where
+  printer = showClosure 0
 
-instance Show Fun where
-  show = showFun 0
+instance Printer Fun where
+  printer = showFun 0
 
-instance Show a => Show (WithMD a) where
-  show = showWithMD 0
+instance Printer a => Printer (WithMD a) where
+  printer = showWithMD 0
 
-
+instance (Show a, Printer b) => Printer (M.Map a b) where
+  printer =
+      (\list -> "[" ++ unlines list ++ "]")
+    . fmap (\(x,y) -> "(" ++ show x ++ " -> " ++ printer y ++ " )")
+    . M.toList
 
 ---------------
 -- Functions
@@ -57,29 +65,29 @@ showAtom indent atom = getIndent indent ++ case atom of
 -- |convert an expression to a string.
 showExpr ::  Int -> Expr -> String
 showExpr indent expr = getIndent indent ++ case expr of
-  QUOTE x@(WithMD _ (LIST _)) -> show x
+  QUOTE x@(WithMD _ (LIST _)) -> printer x
   LIST xs     -> "(" ++ showListElements xs ++ ")"
-  QUOTE x     -> "'" ++ show x
-  ATOM a      -> show a
-  PROCEDURE x -> show x
-  ENVEXPR _ x -> "~" ++ show x
-  STOREENV x  -> "(;storenv " ++ show x ++ ")"
-  IOResult x  -> "<IO: " ++ show x ++ ">"
+  QUOTE x     -> "'" ++ printer x
+  ATOM a      -> printer a
+  PROCEDURE x -> printer x
+  ENVEXPR _ x -> "~" ++ printer x
+  STOREENV x  -> "(;storenv " ++ printer x ++ ")"
+  IOResult x  -> "<IO: " ++ printer x ++ ">"
 
 
 
 -- |convert a closure to a string.
 showClosure :: Int -> Closure -> String
-showClosure indent (Closure _ x) = getIndent indent ++ show x
+showClosure indent (Closure _ x) = getIndent indent ++ printer x
 
 -- |convert a function to a string.
 showFun ::  Int -> Fun -> String
-showFun indent (Fun (FunArgsList arg) body) = getIndent indent ++ "(lambda " ++ arg ++ " " ++ show body ++ ")"
-showFun indent (Fun (FunArgs args mn) body) = getIndent indent ++ "(lambda (" ++ showListStrings (args ++ [maybe "" ('&':) mn]) ++ ") " ++ show body ++ ")"
+showFun indent (Fun (FunArgsList arg) body) = getIndent indent ++ "(lambda " ++ arg ++ " " ++ printer body ++ ")"
+showFun indent (Fun (FunArgs args mn) body) = getIndent indent ++ "(lambda (" ++ showListStrings (args ++ [maybe "" ('&':) mn]) ++ ") " ++ printer body ++ ")"
 
 -- |convert a type with metadata to a string.
-showWithMD ::  Show a => Int -> WithMD a -> String
-showWithMD indent (WithMD _ x) = getIndent indent ++ show x
+showWithMD ::  Printer a => Int -> WithMD a -> String
+showWithMD indent (WithMD _ x) = getIndent indent ++ printer x
 
 -- |strings separated by space.
 showListStrings :: [String] -> String
@@ -88,8 +96,8 @@ showListStrings [x] = x
 showListStrings (x:y:xs) = x ++ " " ++ showListStrings (y:xs)
 
 -- |showable types separated by space.
-showListElements :: Show a => [a] -> String
-showListElements = showListStrings . fmap show
+showListElements :: Printer a => [a] -> String
+showListElements = showListStrings . fmap printer
 
 -- |convert a define to a string.
 showDefine :: Name -> (Name, WithMD Expr) -> String
@@ -127,5 +135,5 @@ showdataModule m =
   [getModFile
   ,getModName
   ,show . fmap showdataModule . getModImports
-  ,show . getModExports
-  ,show . getModEnv]
+  ,printer . getModExports
+  ,printer . getModEnv]

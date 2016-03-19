@@ -1,5 +1,5 @@
 name:                pureli
-version:             0.6.0
+version:             0.7.0
 synopsis:            A purely functional, dynamically typed, parallel interpreted, lisp-like programming language
 license:             BSD3
 license-file:        LICENSE
@@ -46,16 +46,15 @@ library
     ,file-embed
 
   exposed-modules:
-    Pureli.AST
-    Pureli.Lexer
-    Pureli.ParseNumber
-    Pureli.Parser
-    Pureli.Printer
-    Pureli.Module
-    Pureli.Eval
-    Pureli.Repl
-    Pureli.Run
-    Pureli.Utils
+    Language.Pureli.AST
+    Language.Pureli.Lexer
+    Language.Pureli.Parser
+    Language.Pureli.Printer
+    Language.Pureli.Module
+    Language.Pureli.Eval
+    Language.Pureli.Repl
+    Language.Pureli.Run
+    Language.Pureli.Utils
 
   exposed:
     True
@@ -71,7 +70,6 @@ library
 
 
   ghc-options: -threaded -Wall -fwarn-tabs -funbox-strict-fields -O2
-               -fno-warn-orphans -fno-warn-unused-do-bind
 
 
 executable pureli
@@ -81,11 +79,11 @@ executable pureli
      base >=4.7
     ,pureli
 
-  hs-source-dirs:      exec-src
+  hs-source-dirs:      app
   default-language:    Haskell2010
 
 
   ghc-options: -threaded -Wall -fwarn-tabs -funbox-strict-fields -O2
-               -rtsopts -eventlog -fno-warn-orphans -fno-warn-unused-do-bind
+               -rtsopts -eventlog
 
 

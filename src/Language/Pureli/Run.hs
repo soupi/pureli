@@ -3,7 +3,7 @@
 
 -- |
 -- execution module
-module Pureli.Run (run) where
+module Language.Pureli.Run (run) where
 
 import System.IO (hSetBuffering, stdout, BufferMode(NoBuffering))
 
@@ -11,11 +11,11 @@ import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Except
 import System.Directory (setCurrentDirectory, getCurrentDirectory)
 
-import Pureli.Utils (systemFuncs, displayCommands, dashOpener, withCyan)
-import Pureli.AST
-import Pureli.Module
-import Pureli.Eval
-import Pureli.Repl
+import Language.Pureli.Utils (systemFuncs, displayCommands, dashOpener, withCyan)
+import Language.Pureli.AST
+import Language.Pureli.Module
+import Language.Pureli.Eval
+import Language.Pureli.Repl
 
 -- |
 -- Interprets a file or runs the REPL depending on the number of arguments

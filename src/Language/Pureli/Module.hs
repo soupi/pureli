@@ -5,7 +5,7 @@
 
 -- |
 -- Create a module before evaluation
-module Pureli.Module (loadModule, requireToMod) where
+module Language.Pureli.Module (loadModule, requireToMod) where
 
 import Data.Maybe  (fromMaybe)
 import Control.Exception (IOException, catch)
@@ -14,10 +14,10 @@ import qualified Control.Monad.Trans.Except as MT
 import qualified Control.Monad.Trans.State.Strict as MT
 import qualified Data.Map as M
 
-import Pureli.AST
-import Pureli.Utils
-import Pureli.Parser
-import Pureli.Printer()
+import Language.Pureli.AST
+import Language.Pureli.Utils
+import Language.Pureli.Parser
+import Language.Pureli.Printer()
 
 import Paths_pureli (getDataFileName)
 import Data.FileEmbed (embedDir)
@@ -139,12 +139,13 @@ fromDefToModule reqs def = do
       Just exposes -> which (modDefs def) exposes
   exportedDefs   <- filterListMap (map fst exposedDefs) (modDefs def)
   return
-    Module { getModFile = modFile def
-           , getModName = modName def
-           , getModImports = reqs
-           , getModExports = M.fromList exportedDefs
-           , getModEnv     = M.fromList $ modDefs def
-           }
+    Module
+      { getModFile = modFile def
+      , getModName = modName def
+      , getModImports = reqs
+      , getModExports = M.fromList exportedDefs
+      , getModEnv     = M.fromList $ modDefs def
+      }
 
 -- |
 -- filter assoc list from list
